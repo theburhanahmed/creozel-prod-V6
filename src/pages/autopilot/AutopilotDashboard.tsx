@@ -33,10 +33,12 @@ export const AutopilotDashboard = () => {
       try {
         setLoading(true);
         const data = await pipelineService.getPipelines();
-        setPipelines(data.pipelines);
+        // Use API data if available, otherwise fallback to sample data
+        setPipelines(data?.pipelines?.length > 0 ? data.pipelines : samplePipelines);
       } catch (error) {
         console.error('Failed to fetch pipelines:', error);
-        toast.error('Failed to load pipelines');
+        toast.error('Failed to load pipelines, using sample data instead');
+        setPipelines(samplePipelines);
       } finally {
         setLoading(false);
       }
@@ -44,6 +46,9 @@ export const AutopilotDashboard = () => {
 
     fetchPipelines();
   }, []);
+
+  // Sample data for demonstration
+  const samplePipelines = [{
     id: '1',
     title: 'Daily Tech Tips',
     description: 'Short tech tips and tricks for productivity',

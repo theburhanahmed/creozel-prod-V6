@@ -41,7 +41,7 @@ export const userService = {
       throw new Error('No active session');
     }
 
-    const response = await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/get-user-profile`, {
+    const response = await fetch(`${process.env.VITE_SUPABASE_DATABASE_URL}/functions/v1/get-user-profile`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,

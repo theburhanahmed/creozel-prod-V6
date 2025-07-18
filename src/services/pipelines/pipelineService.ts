@@ -49,7 +49,7 @@ export const pipelineService = {
       throw new Error('No active session');
     }
 
-    const response = await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/get-pipelines`, {
+    const response = await fetch(`${process.env.VITE_SUPABASE_DATABASE_URL}/functions/v1/get-pipelines`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
