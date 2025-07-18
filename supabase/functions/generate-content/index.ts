@@ -1,10 +1,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { Deno } from "https://deno.land/std@0.168.0/io/mod.ts" // Declaring Deno variable
+import { Deno } from "https://deno.land/std@0.168.0/io/mod.ts"
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 }
 
 serve(async (req) => {
@@ -29,120 +30,118 @@ serve(async (req) => {
 
     const { type, prompt, options = {} } = await req.json()
 
-    // Check user credits
+    // 1. Fetch default provider for this content type
+    const { data: provider, error: providerError } = await supabaseClient
+      .from("ai_providers")
+      .select("id, name, type, config, is_default, is_active")
+      .eq("type", type)
+      .eq("is_default", true)
+      .eq("is_active", true)
+      .single()
+    if (providerError || !provider) {
+      return new Response(JSON.stringify({ error: "Default provider not found for this content type" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+
+    // 2. Calculate charge using DB function
+    const { data: chargeData, error: chargeError } = await supabaseClient.rpc("get_provider_cost_and_profit", {
+      p_user_id: user.id,
+      p_provider_id: provider.id,
+      p_content_type: type,
+    })
+    if (chargeError || !chargeData || !chargeData[0]) {
+      return new Response(JSON.stringify({ error: "Pricing info not found" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+    const { cost_per_unit, profit_percent } = chargeData[0]
+    const finalCharge = cost_per_unit * (1 + profit_percent / 100)
+
+    // 3. Check user credits
     const { data: userData, error: userError } = await supabaseClient
       .from("users")
       .select("credits")
       .eq("id", user.id)
       .single()
-
     if (userError || !userData) {
       return new Response(JSON.stringify({ error: "User not found" }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
-
-    // Calculate credits needed based on type
-    let creditsNeeded = 1
-    switch (type) {
-      case "text":
-        creditsNeeded = Math.ceil((options.maxTokens || 100) / 100)
-        break
-      case "image":
-        creditsNeeded = 5
-        break
-      case "video":
-        creditsNeeded = 20
-        break
-      case "audio":
-        creditsNeeded = 3
-        break
-    }
-
-    if (userData.credits < creditsNeeded) {
+    if (userData.credits < finalCharge) {
       return new Response(JSON.stringify({ error: "Insufficient credits" }), {
         status: 402,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
-    // Create generation record
-    const { data: generation, error: genError } = await supabaseClient
-      .from("content_generations")
-      .insert({
-        user_id: user.id,
-        type,
-        prompt,
-        credits_used: creditsNeeded,
-        status: "processing",
-      })
-      .select()
-      .single()
+    // 4. Generate content using the provider API
+    let result = null
+    let error_message = null
+    try {
+      switch (provider.name.toLowerCase()) {
+        case "openai":
+          result = await generateText(prompt, options)
+          break
+        case "dall-e":
+          result = await generateImage(prompt, options)
+          break
+        case "replicate":
+          if (type === "video") {
+            result = await generateVideo(prompt, options)
+          } else if (type === "image") {
+            result = await generateImage(prompt, options)
+          }
+          break
+        case "elevenlabs":
+          result = await generateAudio(prompt, options)
+          break
+        default:
+          throw new Error("Unsupported provider for this content type")
+      }
+    } catch (error) {
+      error_message = error.message
+    }
 
-    if (genError) {
-      return new Response(JSON.stringify({ error: "Failed to create generation record" }), {
+    if (error_message) {
+      return new Response(JSON.stringify({ error: error_message }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
-    // Deduct credits
-    const { error: deductError } = await supabaseClient.rpc("deduct_credits", {
-      user_id: user.id,
-      amount: creditsNeeded,
-      description: `${type} generation`,
+    // 5. Deduct credits using the deduct-credits Edge Function
+    const { data: deductData, error: deductError } = await supabaseClient.functions.invoke("deduct-credits", {
+      body: {
+        userId: user.id,
+        generationCost: finalCharge,
+        generationType: `${type}_generation`,
+        generationMetadata: {
+          provider_id: provider.id,
+          content_type: type,
+          timestamp: new Date().toISOString(),
+        },
+      },
     })
-
-    if (deductError) {
+    if (deductError || !deductData?.success) {
       return new Response(JSON.stringify({ error: "Failed to deduct credits" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
 
-    // Generate content based on type
-    let result = null
-    let error_message = null
-
-    try {
-      switch (type) {
-        case "text":
-          result = await generateText(prompt, options)
-          break
-        case "image":
-          result = await generateImage(prompt, options)
-          break
-        case "video":
-          result = await generateVideo(prompt, options)
-          break
-        case "audio":
-          result = await generateAudio(prompt, options)
-          break
-        default:
-          throw new Error("Unsupported generation type")
-      }
-    } catch (error) {
-      error_message = error.message
-    }
-
-    // Update generation record
-    await supabaseClient
-      .from("content_generations")
-      .update({
-        result,
-        status: error_message ? "failed" : "completed",
-        error_message,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", generation.id)
-
+    // 6. Return content and charge info
     return new Response(
       JSON.stringify({
-        id: generation.id,
-        result,
-        status: error_message ? "failed" : "completed",
-        error_message,
+        content: result,
+        charge: finalCharge,
+        cost_per_unit,
+        profit_percent,
+        provider: provider.name,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     )

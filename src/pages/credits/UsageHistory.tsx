@@ -6,56 +6,9 @@ import { Link } from 'react-router-dom';
 export const UsageHistory = () => {
   const [dateRange, setDateRange] = useState('last30days');
   const [filter, setFilter] = useState('all');
-  // Mock usage data
-  const usageData = [{
-    id: 1,
-    date: '2023-10-15',
-    time: '14:32',
-    type: 'video',
-    description: 'AI Video Generation',
-    credits: 15,
-    icon: <VideoIcon size={16} className="text-purple-500" />
-  }, {
-    id: 2,
-    date: '2023-10-14',
-    time: '09:15',
-    type: 'image',
-    description: 'Product Image Creation',
-    credits: 5,
-    icon: <ImageIcon size={16} className="text-blue-500" />
-  }, {
-    id: 3,
-    date: '2023-10-12',
-    time: '16:45',
-    type: 'text',
-    description: 'Blog Post Generation',
-    credits: 3,
-    icon: <TextIcon size={16} className="text-green-500" />
-  }, {
-    id: 4,
-    date: '2023-10-10',
-    time: '11:20',
-    type: 'audio',
-    description: 'Podcast Intro Creation',
-    credits: 8,
-    icon: <MusicIcon size={16} className="text-amber-500" />
-  }, {
-    id: 5,
-    date: '2023-10-08',
-    time: '13:05',
-    type: 'video',
-    description: 'Product Demo Video',
-    credits: 20,
-    icon: <VideoIcon size={16} className="text-purple-500" />
-  }, {
-    id: 6,
-    date: '2023-10-05',
-    time: '15:30',
-    type: 'image',
-    description: 'Social Media Graphics',
-    credits: 4,
-    icon: <ImageIcon size={16} className="text-blue-500" />
-  }];
+  // TODO: Fetch usage history from production data source (Supabase or backend)
+  const [usageData, setUsageData] = useState<any[]>([]);
+  // Example: useEffect(() => { fetchUsageHistory().then(setUsageData); }, []);
   // Filter usage data based on selected filter
   const filteredData = usageData.filter(item => {
     if (filter === 'all') return true;

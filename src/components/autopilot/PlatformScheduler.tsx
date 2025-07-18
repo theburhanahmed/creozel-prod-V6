@@ -49,29 +49,9 @@ export const PlatformScheduler: React.FC<PlatformSchedulerProps> = ({
   const [platformOptions, setPlatformOptions] = useState<Record<string, Record<string, any>>>({});
   // State for view mode
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('list');
-  // Mock scheduled items
-  const [scheduledItems, setScheduledItems] = useState<ScheduleItem[]>([{
-    id: '1',
-    date: new Date(),
-    time: '14:30',
-    platforms: ['instagram', 'tiktok'],
-    title: 'Tech Tips: Keyboard Shortcuts',
-    status: 'scheduled'
-  }, {
-    id: '2',
-    date: new Date(Date.now() + 86400000),
-    time: '10:00',
-    platforms: ['youtube'],
-    title: 'Productivity Apps Review',
-    status: 'scheduled'
-  }, {
-    id: '3',
-    date: new Date(Date.now() + 172800000),
-    time: '09:00',
-    platforms: ['instagram', 'threads', 'blog'],
-    title: 'Email Management Strategies',
-    status: 'draft'
-  }]);
+  // TODO: Fetch scheduled items from production data source (Supabase or backend)
+  const [scheduledItems, setScheduledItems] = useState<ScheduleItem[]>([]);
+  // Example: useEffect(() => { fetchScheduledItems().then(setScheduledItems); }, []);
   // Platform definitions
   const platforms: Platform[] = [{
     id: 'instagram',

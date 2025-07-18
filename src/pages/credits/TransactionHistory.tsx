@@ -1,77 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { ChevronLeftIcon, DownloadIcon, ArrowUpRightIcon, ArrowDownLeftIcon, FilterIcon, SearchIcon, DollarSignIcon, PlusCircleIcon, TrendingUpIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { transactionService, Transaction } from '../../services/transactions/transactionService';
+import { toast } from 'sonner';
+
 export const TransactionHistory = () => {
   const [dateRange, setDateRange] = useState('last30days');
   const [transactionType, setTransactionType] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
-  // Mock transaction data
-  const transactions = [{
-    id: 1,
-    date: '2023-10-15',
-    time: '14:32',
-    type: 'purchase',
-    description: 'Credit Purchase',
-    amount: 100,
-    credits: 500,
-    status: 'completed'
-  }, {
-    id: 2,
-    date: '2023-10-10',
-    time: '09:15',
-    type: 'usage',
-    description: 'Video Generation',
-    amount: null,
-    credits: -15,
-    status: 'completed'
-  }, {
-    id: 3,
-    date: '2023-10-05',
-    time: '16:45',
-    type: 'purchase',
-    description: 'Credit Purchase',
-    amount: 39.99,
-    credits: 200,
-    status: 'completed'
-  }, {
-    id: 4,
-    date: '2023-09-28',
-    time: '11:20',
-    type: 'usage',
-    description: 'Batch Image Creation',
-    amount: null,
-    credits: -8,
-    status: 'completed'
-  }, {
-    id: 5,
-    date: '2023-09-20',
-    time: '13:05',
-    type: 'usage',
-    description: 'Audio Transcription',
-    amount: null,
-    credits: -5,
-    status: 'completed'
-  }, {
-    id: 6,
-    date: '2023-09-15',
-    time: '15:30',
-    type: 'purchase',
-    description: 'Credit Purchase',
-    amount: 9.99,
-    credits: 100,
-    status: 'completed'
-  }, {
-    id: 7,
-    date: '2023-09-10',
-    time: '10:15',
-    type: 'refund',
-    description: 'Refund - Subscription Cancellation',
-    amount: 19.99,
-    credits: 0,
-    status: 'completed'
-  }];
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch transactions
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setLoading(true);
+        const data = await transactionService.getTransactions();
+        setTransactions(data.transactions);
+      } catch (error) {
+        console.error('Failed to fetch transactions:', error);
+        toast.error('Failed to load transaction history');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, []);
   // Filter transactions
   const filteredTransactions = transactions.filter(transaction => {
     // Filter by type

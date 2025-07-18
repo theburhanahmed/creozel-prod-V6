@@ -61,6 +61,16 @@ const platformPostFunctions: Record<string, Function> = {
   tiktok: postToTikTok,
 }
 
+async function notifyUser(supabase, userId, title, message, type = "info", action_url = null) {
+  await supabase.from("notifications").insert({
+    user_id: userId,
+    title,
+    message,
+    type,
+    action_url,
+  })
+}
+
 // Main handler function
 serve(async (req) => {
   // Handle CORS
@@ -130,6 +140,13 @@ serve(async (req) => {
             })
             .eq("id", item.id)
 
+          await notifyUser(
+            supabase,
+            item.user_id,
+            `Post Success: ${item.platform}`,
+            `Content posted successfully to ${item.platform}.`,
+            "success"
+          )
           return { id: item.id, success: true, platform: item.platform }
         } catch (error) {
           console.error(`Error processing queue item ${item.id}:`, error)
@@ -137,6 +154,13 @@ serve(async (req) => {
             .from("posting_queue")
             .update({ status: "failed", updated_at: new Date().toISOString() })
             .eq("id", item.id)
+          await notifyUser(
+            supabase,
+            item.user_id,
+            `Post Failed: ${item.platform}`,
+            `Failed to post content to ${item.platform}: ${error.message}`,
+            "error"
+          )
           return { id: item.id, success: false, error: error.message }
         }
       }),

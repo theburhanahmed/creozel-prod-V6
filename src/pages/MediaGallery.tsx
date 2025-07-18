@@ -4,7 +4,7 @@ import { Button } from '../components/ui/Button';
 import { Tabs } from '../components/ui/Tabs';
 import { toast } from 'sonner';
 import { ImageIcon, VideoIcon, FileIcon, MusicIcon, FolderIcon, SearchIcon, FilterIcon, GridIcon, ListIcon, UploadIcon, DownloadIcon, ShareIcon, TrashIcon, MoreHorizontalIcon, StarIcon, PlusIcon, CheckIcon, ChevronDownIcon, FileTextIcon, FolderPlusIcon, RefreshCwIcon } from 'lucide-react';
-import { mockMediaItems, filterMediaItems, MediaItem } from '../services/mockData';
+import { mediaService, MediaItem } from '../services/media/mediaService';
 export const MediaGallery = () => {
   const [viewMode, setViewMode] = useState('grid');
   const [activeTab, setActiveTab] = useState('all');
@@ -54,43 +54,18 @@ export const MediaGallery = () => {
   }, [activeTab, activeFilters, searchTerm]);
   const loadMediaItems = async () => {
     setIsLoading(true);
-    // Simulate API delay
-    setTimeout(() => {
-      try {
-        // Create filter object
-        const filters: {
-          query?: string;
-          type?: string[];
-          starred?: boolean;
-          shared?: boolean;
-        } = {};
-        if (searchTerm) {
-          filters.query = searchTerm;
-        }
-        // Map active tab to file types
-        if (activeTab !== 'all') {
-          filters.type = [activeTab.slice(0, -1)]; // Remove 's' from end
-        }
-        // Apply filters
-        if (activeFilters.includes('starred')) {
-          filters.starred = true;
-        }
-        if (activeFilters.includes('shared')) {
-          filters.shared = true;
-        }
-        // Filter the mock data
-        const filteredItems = filterMediaItems(mockMediaItems, filters);
-        setMediaItems(filteredItems);
-        setTotalItems(filteredItems.length);
-      } catch (error) {
-        console.error('Failed to load media items:', error);
-        toast.error('Failed to load media files', {
-          description: 'Please try again or contact support if the problem persists.'
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    }, 500); // Simulate loading delay
+    try {
+      const data = await mediaService.getMediaLibrary();
+      setMediaItems(data.mediaItems);
+      setTotalItems(data.mediaItems.length);
+    } catch (error) {
+      console.error('Failed to load media items:', error);
+      toast.error('Failed to load media files', {
+        description: 'Please try again or contact support if the problem persists.'
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
   const getFileIcon = (type: string, size = 20) => {
     switch (type) {

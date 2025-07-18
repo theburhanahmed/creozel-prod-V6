@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Tabs } from '../components/ui/Tabs';
 import { TrendingUpIcon, UsersIcon, EyeIcon, MessageSquareIcon, ShareIcon, BarChart4Icon, DownloadIcon, CalendarIcon, GlobeIcon, HeartIcon, ClockIcon, LineChartIcon, PieChartIcon, BarChart2Icon, ArrowUpRightIcon, ArrowDownRightIcon, CheckCircleIcon, XCircleIcon, InstagramIcon, TwitterIcon, YoutubeIcon, LinkedinIcon, MapPinIcon, UserIcon, ThumbsUpIcon } from 'lucide-react';
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { socialService } from '../services/social/socialService';
+import { toast } from 'sonner';
 export const Analytics = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const tabs = [{

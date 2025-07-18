@@ -1,28 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { VideoIcon, UploadIcon, SparklesIcon, PlayIcon, PauseIcon, LoaderIcon, Settings2Icon, ImageIcon, Type as TypeIcon, ChevronLeftIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { supabase } from '../../../supabase/client';
+import { useContentCharge } from '../../hooks/useContentCharge';
+
 export const VideoEditor = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [selectedStyle, setSelectedStyle] = useState('explanatory');
   const [script, setScript] = useState('');
-  const handleGenerate = () => {
+  const [userId, setUserId] = useState('');
+
+  useEffect(() => {
+    supabase.auth.getUser().then(res => {
+      if (res?.data?.user?.id) setUserId(res.data.user.id);
+    });
+  }, []);
+
+  const contentType = 'video';
+  const { chargeInfo, loading: chargeLoading, error: chargeError } = useContentCharge({ userId, contentType });
+
+  const handleGenerate = async () => {
     if (!script.trim()) {
       toast.error('Please enter a video script');
       return;
     }
     setIsGenerating(true);
-    // Simulate generation
-    setTimeout(() => {
-      setIsGenerating(false);
-      setVideoUrl('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800&auto=format&fit=crop&q=60');
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-content', {
+        body: { type: 'video', prompt: script, options: { style: selectedStyle } },
+      });
+      if (error || data?.error) throw error || new Error(data?.error);
+      setVideoUrl(data?.content?.url || data?.content || '');
       toast.success('Video generated successfully!');
-    }, 2000);
+    } catch (error: any) {
+      toast.error('Failed to generate video', { description: error.message || 'Unknown error' });
+    } finally {
+      setIsGenerating(false);
+    }
   };
+
   const videoStyles = [{
     id: 'explanatory',
     name: 'Explanatory',
@@ -40,6 +61,7 @@ export const VideoEditor = () => {
     name: 'Social Media',
     icon: ImageIcon
   }];
+
   return <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -92,6 +114,22 @@ export const VideoEditor = () => {
                     </div>;
               })}
               </div>
+            </div>
+            {/* Charge Preview */}
+            <div>
+              {chargeLoading ? (
+                <span>Loading charge...</span>
+              ) : chargeError ? (
+                <span className="text-red-500">Charge unavailable</span>
+              ) : chargeInfo ? (
+                <span>
+                  <strong>Charge:</strong> {chargeInfo.finalCharge?.toFixed(2)} credits
+                  <br />
+                  <small>
+                    (Base: {chargeInfo.cost_per_unit} + Profit: {chargeInfo.profit_percent}%)
+                  </small>
+                </span>
+              ) : null}
             </div>
             <Button variant="primary" size="lg" leftIcon={isGenerating ? <LoaderIcon className="animate-spin" /> : <SparklesIcon />} onClick={handleGenerate} disabled={isGenerating || !script.trim()} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
               {isGenerating ? 'Generating...' : 'Generate Video'}

@@ -1,25 +1,47 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { ImageIcon, UploadIcon, SparklesIcon, LoaderIcon, ChevronLeftIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
+import { supabase } from '../../../supabase/client';
+import { useContentCharge } from '../../hooks/useContentCharge';
+
 export const ImageEditor = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [prompt, setPrompt] = useState('');
-  const handleGenerate = () => {
+  const [userId, setUserId] = useState('');
+
+  useEffect(() => {
+    supabase.auth.getUser().then(res => {
+      if (res?.data?.user?.id) setUserId(res.data.user.id);
+    });
+  }, []);
+
+  const contentType = 'image';
+  const { chargeInfo, loading: chargeLoading, error: chargeError } = useContentCharge({ userId, contentType });
+
+  const handleGenerate = async () => {
     if (!prompt.trim()) {
-      toast.error('Please enter a description first');
+      toast.error('Please enter an image prompt');
       return;
     }
     setIsGenerating(true);
-    setTimeout(() => {
-      setIsGenerating(false);
-      setSelectedImage('https://images.unsplash.com/photo-1682687982501-1e58ab814714');
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-content', {
+        body: { type: 'image', prompt },
+      });
+      if (error || data?.error) throw error || new Error(data?.error);
+      setSelectedImage(data?.content?.url || data?.content || '');
       toast.success('Image generated successfully!');
-    }, 2000);
+    } catch (error: any) {
+      toast.error('Failed to generate image', { description: error.message || 'Unknown error' });
+    } finally {
+      setIsGenerating(false);
+    }
   };
+
   return <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -45,7 +67,23 @@ export const ImageEditor = () => {
               </label>
               <textarea id="prompt" value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Describe the image you want to generate..." className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500" rows={4} />
             </div>
-            <Button variant="primary" size="lg" leftIcon={isGenerating ? <LoaderIcon className="animate-spin" /> : <SparklesIcon size={18} />} onClick={handleGenerate} disabled={isGenerating || !prompt.trim()} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
+            {/* Charge Preview */}
+            <div>
+              {chargeLoading ? (
+                <span>Loading charge...</span>
+              ) : chargeError ? (
+                <span className="text-red-500">Charge unavailable</span>
+              ) : chargeInfo ? (
+                <span>
+                  <strong>Charge:</strong> {chargeInfo.finalCharge?.toFixed(2)} credits
+                  <br />
+                  <small>
+                    (Base: {chargeInfo.cost_per_unit} + Profit: {chargeInfo.profit_percent}%)
+                  </small>
+                </span>
+              ) : null}
+            </div>
+            <Button variant="primary" size="lg" onClick={handleGenerate} disabled={isGenerating || !prompt.trim()} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
               {isGenerating ? 'Generating...' : 'Generate Image'}
             </Button>
             <div className="relative">

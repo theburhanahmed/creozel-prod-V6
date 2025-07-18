@@ -24,6 +24,7 @@ import { PostScheduler } from './pages/autopilot/PostScheduler';
 import { MediaLibrary } from './pages/autopilot/MediaLibrary';
 import { EngagementAnalytics } from './pages/autopilot/EngagementAnalytics';
 import { Login } from './pages/auth/Login';
+import { Register } from './pages/auth/Register';
 import { AuthGuard } from './components/auth/AuthGuard';
 import { SocialAccounts } from './pages/SocialAccounts';
 import { MediaGallery } from './pages/MediaGallery';
@@ -33,6 +34,14 @@ import { Card, CardMenu } from './components/ui/Card';
 import { UsageHistory } from './pages/credits/UsageHistory';
 import { AddCredits } from './pages/credits/AddCredits';
 import { TransactionHistory } from './pages/credits/TransactionHistory';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+
+function RootRedirect() {
+  const { isAuthenticated, loading } = useAuth();
+  if (loading) return null;
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Navigate to="/auth/login" replace />;
+}
+
 export function App() {
   // Theme handling - always dark mode to match the design
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -101,109 +110,110 @@ export function App() {
     };
     handleAdminRedirect();
   }, []);
-  return <BrowserRouter>
+  return <AuthProvider>
+    <BrowserRouter>
       <div className={`relative min-h-screen w-full bg-gray-50 dark:bg-[#0A0E14] transition-colors duration-300`}>
         <Routes>
           {/* Public auth routes */}
           <Route path="/auth/login" element={<Login />} />
+          <Route path="/auth/register" element={<Register />} />
+          {/* Root route redirect */}
+          <Route path="/" element={<RootRedirect />} />
           {/* Protected app routes */}
           <Route path="/*" element={<AuthGuard>
-                <div className="flex min-h-screen w-full">
-                  {/* Sidebar */}
-                  <Sidebar id="sidebar" isVisible={true} onClose={() => {}} isDarkMode={isDarkMode} />
-                  {/* Main content - Adjust margin to account for collapsed sidebar */}
-                  <div className="flex-1 flex flex-col min-w-0 w-full ml-20 transition-all duration-300">
-                    <Topbar isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} toggleMenu={() => setShowMenu(!showMenu)} isMobile={isMobileView} />
-                    {/* Add CardMenu here */}
-                    <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
-                      {location.pathname === '/' && <CardMenu items={[{
-                  icon: <HomeIcon />,
-                  title: 'Home',
-                  href: '/'
-                }, {
-                  icon: <PenToolIcon />,
-                  title: 'Content',
-                  href: '/content'
-                }, {
-                  icon: <RocketIcon />,
-                  title: 'Autopilot',
-                  href: '/autopilot'
-                }, {
-                  icon: <BarChart2Icon />,
-                  title: 'Analytics',
-                  href: '/analytics'
-                }, {
-                  icon: <MessageSquareIcon />,
-                  title: 'Messages',
-                  href: '/messages'
-                }]} />}
-                      {location.pathname.startsWith('/content') && <CardMenu items={[{
-                  icon: <FileTextIcon />,
-                  title: 'Text',
-                  href: '/content/text'
-                }, {
-                  icon: <ImageIcon />,
-                  title: 'Image',
-                  href: '/content/image'
-                }, {
-                  icon: <VideoIcon />,
-                  title: 'Video',
-                  href: '/content/video'
-                }, {
-                  icon: <MicIcon />,
-                  title: 'Audio',
-                  href: '/content/audio'
-                }]} />}
-                    </div>
-                    {/* Add Affiliate Button - Updated positioning */}
-                    <div className="fixed bottom-6 left-5 z-50">
-                      <Link to="/affiliate">
-                        <CardMenu items={[{
+            <div className="flex min-h-screen w-full">
+              {/* Sidebar */}
+              <Sidebar id="sidebar" isVisible={true} onClose={() => {}} isDarkMode={isDarkMode} />
+              {/* Main content - Adjust margin to account for collapsed sidebar */}
+              <div className="flex-1 flex flex-col min-w-0 w-full ml-20 transition-all duration-300">
+                <Topbar isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} toggleMenu={() => setShowMenu(!showMenu)} isMobile={isMobileView} />
+                {/* Add CardMenu here */}
+                <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+                  {location.pathname === '/' && <CardMenu items={[{
+                    icon: <HomeIcon />,
+                    title: 'Home',
+                    href: '/'
+                  }, {
+                    icon: <PenToolIcon />,
+                    title: 'Content',
+                    href: '/content'
+                  }, {
+                    icon: <RocketIcon />,
+                    title: 'Autopilot',
+                    href: '/autopilot'
+                  }, {
+                    icon: <BarChart2Icon />,
+                    title: 'Analytics',
+                    href: '/analytics'
+                  }, {
+                    icon: <MessageSquareIcon />,
+                    title: 'Messages',
+                    href: '/messages'
+                  }]} />}
+                  {location.pathname.startsWith('/content') && <CardMenu items={[{
+                    icon: <FileTextIcon />,
+                    title: 'Text',
+                    href: '/content/text'
+                  }, {
+                    icon: <ImageIcon />,
+                    title: 'Image',
+                    href: '/content/image'
+                  }, {
+                    icon: <VideoIcon />,
+                    title: 'Video',
+                    href: '/content/video'
+                  }, {
+                    icon: <MicIcon />,
+                    title: 'Audio',
+                    href: '/content/audio'
+                  }]} />}
+                </div>
+                {/* Add Affiliate Button - Updated positioning */}
+                <div className="fixed bottom-6 left-5 z-50">
+                  <CardMenu items={[{
                     icon: <DollarSignIcon size={18} />,
                     title: 'Affiliate',
                     href: '/affiliate'
                   }]} className="bg-gradient-to-r from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 transition-all duration-300 animate-pulse-slow border-amber-500/20 hover:scale-110 hover:shadow-lg" />
-                      </Link>
-                    </div>
-                    <main className="flex-1 w-full px-4 py-4 md:py-6 max-w-screen-2xl bg-gray-50 dark:bg-[#0A0E14] transition-colors duration-300 mt-16">
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/content" element={<Navigate to="/content/text" replace />} />
-                        <Route path="/content/text" element={<TextEditor />} />
-                        <Route path="/content/image" element={<ImageEditor />} />
-                        <Route path="/content/audio" element={<AudioEditor />} />
-                        <Route path="/content/video" element={<VideoEditor />} />
-                        {/* Autopilot Pipelines Routes */}
-                        <Route path="/autopilot" element={<AutopilotDashboard />} />
-                        <Route path="/autopilot/create" element={<CreatePipeline />} />
-                        <Route path="/autopilot/video-generator" element={<VideoGenerator />} />
-                        <Route path="/autopilot/templates" element={<CustomTemplates />} />
-                        <Route path="/autopilot/scheduler" element={<PostScheduler />} />
-                        <Route path="/autopilot/media" element={<MediaLibrary />} />
-                        <Route path="/autopilot/analytics" element={<EngagementAnalytics />} />
-                        {/* Credits Routes */}
-                        <Route path="/credits/usage" element={<UsageHistory />} />
-                        <Route path="/credits/add" element={<AddCredits />} />
-                        <Route path="/credits/transactions" element={<TransactionHistory />} />
-                        {/* Media Gallery */}
-                        <Route path="/media" element={<MediaGallery />} />
-                        {/* Customer-facing routes */}
-                        <Route path="/social" element={<SocialMedia />} />
-                        <Route path="/analytics" element={<Analytics />} />
-                        <Route path="/calendar" element={<Calendar />} />
-                        <Route path="/messages" element={<Messages />} />
-                        <Route path="/team" element={<Team />} />
-                        <Route path="/affiliate" element={<AffiliatePage />} />
-                        <Route path="/affiliate" element={<Settings defaultTab="affiliate" />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/help" element={<Help />} />
-                        <Route path="/social-accounts" element={<SocialAccounts />} />
-                        <Route path="*" element={<Navigate to="/" replace />} />
-                      </Routes>
-                    </main>
-                  </div>
                 </div>
-              </AuthGuard>} />
+                <main className="flex-1 w-full px-4 py-4 md:py-6 max-w-screen-2xl bg-gray-50 dark:bg-[#0A0E14] transition-colors duration-300 mt-16">
+                  <Routes>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/content" element={<Navigate to="/content/text" replace />} />
+                    <Route path="/content/text" element={<TextEditor />} />
+                    <Route path="/content/image" element={<ImageEditor />} />
+                    <Route path="/content/audio" element={<AudioEditor />} />
+                    <Route path="/content/video" element={<VideoEditor />} />
+                    {/* Autopilot Pipelines Routes */}
+                    <Route path="/autopilot" element={<AutopilotDashboard />} />
+                    <Route path="/autopilot/create" element={<CreatePipeline />} />
+                    <Route path="/autopilot/video-generator" element={<VideoGenerator />} />
+                    <Route path="/autopilot/templates" element={<CustomTemplates />} />
+                    <Route path="/autopilot/scheduler" element={<PostScheduler />} />
+                    <Route path="/autopilot/media" element={<MediaLibrary />} />
+                    <Route path="/autopilot/analytics" element={<EngagementAnalytics />} />
+                    {/* Credits Routes */}
+                    <Route path="/credits/usage" element={<UsageHistory />} />
+                    <Route path="/credits/add" element={<AddCredits />} />
+                    <Route path="/credits/transactions" element={<TransactionHistory />} />
+                    {/* Media Gallery */}
+                    <Route path="/media" element={<MediaGallery />} />
+                    {/* Customer-facing routes */}
+                    <Route path="/social" element={<SocialMedia />} />
+                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/calendar" element={<Calendar />} />
+                    <Route path="/messages" element={<Messages />} />
+                    <Route path="/team" element={<Team />} />
+                    <Route path="/affiliate" element={<AffiliatePage />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/help" element={<Help />} />
+                    <Route path="/social-accounts" element={<SocialAccounts />} />
+                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                  </Routes>
+                </main>
+              </div>
+            </div>
+          </AuthGuard>} />
         </Routes>
         <Toaster position="top-right" theme={isDarkMode ? 'dark' : 'light'} toastOptions={{
         style: {
@@ -216,5 +226,6 @@ export function App() {
         }
       }} />
       </div>
-    </BrowserRouter>;
+    </BrowserRouter>
+  </AuthProvider>;
 }

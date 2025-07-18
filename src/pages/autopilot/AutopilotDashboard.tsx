@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -6,8 +6,13 @@ import { Tabs } from '../../components/ui/Tabs';
 import { RocketIcon, PlusIcon, PlayIcon, PauseIcon, TrendingUpIcon, BarChart2Icon, ClockIcon, CheckCircleIcon, AlertCircleIcon, MousePointerClickIcon } from 'lucide-react';
 import { PipelineCard } from '../../components/autopilot/PipelineCard';
 import { GlassCard } from '../../components/ui/GlassCard';
+import { pipelineService, Pipeline } from '../../services/pipelines/pipelineService';
+import { toast } from 'sonner';
 export const AutopilotDashboard = () => {
   const [activeTab, setActiveTab] = useState('all');
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [loading, setLoading] = useState(true);
+  
   const tabs = [{
     id: 'all',
     label: 'All Pipelines'
@@ -21,7 +26,24 @@ export const AutopilotDashboard = () => {
     id: 'completed',
     label: 'Completed'
   }];
-  const pipelines = [{
+
+  // Fetch pipelines
+  useEffect(() => {
+    const fetchPipelines = async () => {
+      try {
+        setLoading(true);
+        const data = await pipelineService.getPipelines();
+        setPipelines(data.pipelines);
+      } catch (error) {
+        console.error('Failed to fetch pipelines:', error);
+        toast.error('Failed to load pipelines');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPipelines();
+  }, []);
     id: '1',
     title: 'Daily Tech Tips',
     description: 'Short tech tips and tricks for productivity',

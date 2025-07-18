@@ -12,23 +12,11 @@ export const SmartOptimizerSidebar: React.FC<SmartOptimizerSidebarProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activeSection, setActiveSection] = useState<string | null>(null);
-  // Mock data for different optimization suggestions
-  const optimizedTitles = ["10 Life-Changing Productivity Hacks You Haven't Tried Yet", 'The Science-Backed Method to Learn Any Skill in Half the Time', 'Why Successful People Do These 5 Things Before 8AM'];
-  const trendingHashtags = ['#ProductivityTips', '#WorkFromHome', '#LifeHacks', '#MorningRoutine', '#TimeManagement', '#FocusTips', '#WorkLifeBalance', '#MindsetShift', '#SuccessHabits', '#DailyHustle'];
-  const viralCaptions = ['I tried this for just ONE week and my productivity doubled... 🤯 #GameChanger', 'This simple morning routine changed everything for me. Swipe to see the before and after results! ➡️', 'The ONE productivity hack I wish I knew 5 years ago... (warning: this might change your life) ⚡'];
-  const backgroundMusic = [{
-    name: 'Productive Morning',
-    artist: 'Lo-Fi Beats',
-    duration: '3:42'
-  }, {
-    name: 'Focus Flow',
-    artist: 'Ambient Tracks',
-    duration: '4:15'
-  }, {
-    name: 'Motivation Mix',
-    artist: 'Upbeat Studio',
-    duration: '2:58'
-  }];
+  // TODO: Fetch optimization suggestions from production data source (Supabase or backend)
+  const [optimizedTitles, setOptimizedTitles] = useState<string[]>([]);
+  const [trendingHashtags, setTrendingHashtags] = useState<string[]>([]);
+  const [viralCaptions, setViralCaptions] = useState<string[]>([]);
+  const [backgroundMusic, setBackgroundMusic] = useState<any[]>([]);
   // Toggle the sidebar collapse state
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);

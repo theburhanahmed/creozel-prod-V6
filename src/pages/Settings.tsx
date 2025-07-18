@@ -4,6 +4,8 @@ import { Button } from '../components/ui/Button';
 import { SaveIcon, UserIcon, BellIcon, ShieldIcon, PaletteIcon, CreditCardIcon, DollarSignIcon, SettingsIcon, LogOutIcon, KeyIcon, MicIcon, ToggleLeftIcon, ToggleRightIcon, MonitorIcon, SlidersIcon, EditIcon, PlusIcon, InstagramIcon, TwitterIcon, LinkedinIcon, YoutubeIcon, TrendingUpIcon, MailIcon, UploadIcon, AlertCircleIcon, FileTextIcon, VideoIcon, ImageIcon, CheckIcon, XIcon, ClockIcon, ZapIcon, RefreshCwIcon, UsersIcon } from 'lucide-react';
 import { BrandingSettings, BrandSettings } from '../components/settings/BrandingSettings';
 import { toast } from 'sonner';
+import { userService, UserData } from '../services/user/userService';
+import { transactionService } from '../services/transactions/transactionService';
 export const Settings = () => {
   const [activeTab, setActiveTab] = useState('profile');
   const [brandSettings, setBrandSettings] = useState<BrandSettings>({
@@ -15,15 +17,9 @@ export const Settings = () => {
     voiceTone: 'professional',
     logo: undefined
   });
-  // Mock user data
-  const userData = {
-    name: 'Alex Johnson',
-    email: 'alex@example.com',
-    role: 'Admin',
-    avatar: null,
-    timezone: 'America/New_York',
-    language: 'en-US'
-  };
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [transactions, setTransactions] = useState<any[]>([]);
   // Mock connected accounts
   const connectedAccounts = [{
     id: 'instagram',
@@ -144,6 +140,28 @@ export const Settings = () => {
   const handleCancelSubscription = () => {
     toast.success('Subscription cancellation initiated');
   };
+  // Fetch user data and transactions
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [userProfile, transactionData] = await Promise.all([
+          userService.getUserProfile(),
+          transactionService.getTransactions()
+        ]);
+        setUserData(userProfile);
+        setTransactions(transactionData.transactions);
+      } catch (error) {
+        console.error('Failed to fetch user data:', error);
+        toast.error('Failed to load user data');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
   // Get tab from URL if present
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -245,7 +263,7 @@ export const Settings = () => {
                     <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center">
                       <div className="relative">
                         <div className="w-24 h-24 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold">
-                          {userData.name.split(' ').map(n => n[0]).join('')}
+                          {userData?.user?.full_name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
                         </div>
                         <button className="absolute bottom-0 right-0 w-8 h-8 rounded-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-700 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                           <UploadIcon size={14} />
@@ -253,13 +271,13 @@ export const Settings = () => {
                       </div>
                       <div className="space-y-1">
                         <h3 className="font-medium text-gray-900 dark:text-white">
-                          {userData.name}
+                          {userData?.user?.full_name || 'Loading...'}
                         </h3>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {userData.email}
+                          {userData?.user?.email || 'Loading...'}
                         </p>
                         <p className="text-sm text-gray-500 dark:text-gray-400">
-                          {userData.role}
+                          {userData?.subscription?.plan_name || 'Free Plan'}
                         </p>
                       </div>
                     </div>
@@ -269,7 +287,7 @@ export const Settings = () => {
                           Full Name
                         </label>
                         <div className="flex">
-                          <input type="text" defaultValue={userData.name} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
+                          <input type="text" defaultValue={userData?.user?.full_name || ''} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
                         </div>
                       </div>
                       <div>
@@ -277,7 +295,7 @@ export const Settings = () => {
                           Email Address
                         </label>
                         <div className="flex">
-                          <input type="email" defaultValue={userData.email} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
+                          <input type="email" defaultValue={userData?.user?.email || ''} className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white" />
                         </div>
                       </div>
                       <div>

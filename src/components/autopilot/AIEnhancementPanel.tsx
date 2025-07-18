@@ -16,58 +16,10 @@ export const AIEnhancementPanel: React.FC<AIEnhancementPanelProps> = ({
 }) => {
   const [autopilotEnabled, setAutopilotEnabled] = useState(false);
   const [generatingMore, setGeneratingMore] = useState(false);
-  // Mock data for AI suggestions
-  const alternateFormats = [{
-    id: 'carousel',
-    name: 'Carousel Post',
-    icon: <LayoutIcon size={16} />,
-    description: 'Convert to a multi-slide carousel with key points',
-    match: 92
-  }, {
-    id: 'video',
-    name: 'Short Video',
-    icon: <VideoIcon size={16} />,
-    description: 'Transform into a 60-second vertical video',
-    match: 87
-  }, {
-    id: 'blog',
-    name: 'Blog Post',
-    icon: <FileTextIcon size={16} />,
-    description: 'Expand into a detailed blog article',
-    match: 78
-  }];
-  const bestTimings = [{
-    platform: 'Instagram',
-    icon: <InstagramIcon size={16} className="text-pink-500" />,
-    time: 'Tuesday, 5:30 PM',
-    engagement: '+24% higher engagement'
-  }, {
-    platform: 'LinkedIn',
-    icon: <LinkedinIcon size={16} className="text-blue-700" />,
-    time: 'Wednesday, 9:00 AM',
-    engagement: '+18% higher engagement'
-  }, {
-    platform: 'Twitter',
-    icon: <TwitterIcon size={16} className="text-blue-400" />,
-    time: 'Monday, 12:00 PM',
-    engagement: '+15% higher engagement'
-  }];
-  const autoGenerateOptions = [{
-    id: 'email',
-    name: 'Email Newsletter',
-    description: 'Weekly newsletter based on this content',
-    confidence: 'High match'
-  }, {
-    id: 'social',
-    name: 'Social Media Posts',
-    description: '3-5 posts with variations for each platform',
-    confidence: 'High match'
-  }, {
-    id: 'graphics',
-    name: 'Infographics',
-    description: 'Visual representation of key statistics',
-    confidence: 'Medium match'
-  }];
+  // TODO: Fetch AI enhancement suggestions from production data source (Supabase or backend)
+  const [alternateFormats, setAlternateFormats] = useState<any[]>([]);
+  const [bestTimings, setBestTimings] = useState<any[]>([]);
+  const [autoGenerateOptions, setAutoGenerateOptions] = useState<any[]>([]);
   const handleToggleAutopilot = () => {
     setAutopilotEnabled(!autopilotEnabled);
     toast.success(autopilotEnabled ? 'Autopilot disabled' : 'Autopilot enabled', {

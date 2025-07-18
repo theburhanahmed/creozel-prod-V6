@@ -6,6 +6,9 @@ import { Card } from '../ui/Card';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
 // Platform icons
 import { InstagramIcon, TwitterIcon, LinkedinIcon, YoutubeIcon, FacebookIcon } from 'lucide-react';
+import { socialService } from '../../services/social/socialService';
+import { useAuth } from '../../contexts/AuthContext';
+import { getFacebookOAuthUrl, getLinkedInOAuthUrl, getGoogleOAuthUrl, getTwitterOAuthUrl, getYouTubeOAuthUrl, getInstagramOAuthUrl, getTikTokOAuthUrl } from '../../services/social/socialService';
 // Define types
 interface SocialAccount {
   id: string;
@@ -20,107 +23,75 @@ interface SocialAccount {
   isRefreshing?: boolean;
 }
 export const ConnectedAccountsManager = () => {
-  // Mock accounts data - in a real app, this would come from an API
-  const [accounts, setAccounts] = useState<SocialAccount[]>([{
-    id: 'youtube',
-    name: 'YouTube',
-    icon: <YoutubeIcon size={18} />,
-    color: 'from-red-500 to-red-600',
-    username: 'CreativeTechChannel',
-    profileUrl: 'https://youtube.com/creativetechchannel',
-    connected: true,
-    lastRefreshed: '2 hours ago',
-    followers: 12500
-  }, {
-    id: 'instagram',
-    name: 'Instagram',
-    icon: <InstagramIcon size={18} />,
-    color: 'from-pink-500 to-purple-500',
-    username: 'creativedash',
-    profileUrl: 'https://instagram.com/creativedash',
-    connected: true,
-    lastRefreshed: '1 hour ago',
-    followers: 8750
-  }, {
-    id: 'twitter',
-    name: 'X (Twitter)',
-    icon: <TwitterIcon size={18} />,
-    color: 'from-blue-400 to-blue-600',
-    username: '@creativedash',
-    profileUrl: 'https://twitter.com/creativedash',
-    connected: true,
-    lastRefreshed: '30 minutes ago',
-    followers: 5280
-  }, {
-    id: 'linkedin',
-    name: 'LinkedIn',
-    icon: <LinkedinIcon size={18} />,
-    color: 'from-blue-700 to-blue-900',
-    connected: false
-  }, {
-    id: 'facebook',
-    name: 'Facebook',
-    icon: <FacebookIcon size={18} />,
-    color: 'from-blue-600 to-blue-800',
-    connected: false
-  }, {
-    id: 'threads',
-    name: 'Threads',
-    icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-          <path d="M18.7001 7.41006C18.2276 6.94766 17.6533 6.59064 17.0212 6.35878C16.389 6.12692 15.7143 6.02513 15.0401 6.06006C13.1514 6.06006 11.8001 6.91006 11.0001 8.60006C10.3201 6.91006 9.00009 6.06006 7.00009 6.06006C3.60009 6.06006 1.00009 8.56006 1.00009 12.1301C0.988851 13.1661 1.19382 14.1918 1.60009 15.1301C2.30009 16.6301 3.50009 17.9301 5.20009 19.0001C6.70009 19.9601 8.30009 20.7301 10.0001 21.2001L11.0001 21.4001L12.0001 21.2001C13.7001 20.7301 15.3001 19.9601 16.8001 19.0001C18.5001 17.9301 19.7001 16.6301 20.4001 15.1301C20.8063 14.1918 21.0113 13.1661 21.0001 12.1301C21.0001 10.2801 20.1001 8.65006 18.7001 7.41006ZM17.4001 13.5001C17.2203 14.4165 16.7899 15.2587 16.1601 15.9301C15.6001 16.5301 14.9001 17.0301 14.1001 17.5001C13.4001 17.9001 12.7001 18.2001 12.0001 18.3001C11.3001 18.2001 10.6001 17.9001 9.90009 17.5001C9.10009 17.0301 8.40009 16.5301 7.84009 15.9301C7.21034 15.2587 6.77986 14.4165 6.60009 13.5001C6.52144 13.0238 6.52144 12.5364 6.60009 12.0601C6.70009 11.5601 6.90009 11.1601 7.10009 10.7601C7.30009 10.3601 7.60009 10.0601 8.00009 9.76006C8.40009 9.46006 8.80009 9.26006 9.30009 9.16006C9.80009 9.06006 10.3001 9.06006 10.8001 9.16006C11.3001 9.26006 11.7001 9.46006 12.1001 9.76006C12.5001 10.0601 12.8001 10.3601 13.0001 10.7601C13.2001 11.1601 13.4001 11.5601 13.5001 12.0601C13.5788 12.5364 13.5788 13.0238 13.5001 13.5001H17.4001Z" />
-        </svg>,
-    color: 'from-gray-800 to-gray-900 dark:from-gray-200 dark:to-gray-100',
-    connected: false
-  }]);
+  // Accounts state, initially empty
+  const [accounts, setAccounts] = useState<SocialAccount[]>([]);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [accountToDisconnect, setAccountToDisconnect] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  // Simulate API loading
+  const { user } = useAuth();
+  // Load connected platforms from API
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
+    setIsLoading(true);
+    socialService.getConnectedPlatforms()
+      .then((data: SocialAccount[]) => {
+        setAccounts(data || []);
+      })
+      .catch((err: Error) => {
+        toast.error('Failed to load connected accounts');
+      })
+      .finally(() => setIsLoading(false));
   }, []);
-  // Connect a platform
-  const handleConnect = (platformId: string) => {
-    // In a real app, this would trigger OAuth flow
-    toast.loading(`Connecting to ${platformId}...`);
-    // Simulate API call
-    setTimeout(() => {
-      setAccounts(prev => prev.map(account => {
-        if (account.id === platformId) {
-          // Mock data for newly connected accounts
-          const mockData: Partial<SocialAccount> = {
-            connected: true,
-            lastRefreshed: 'Just now'
-          };
-          // Add platform-specific mock data
-          if (platformId === 'linkedin') {
-            mockData.username = 'creativedash-company';
-            mockData.profileUrl = 'https://linkedin.com/company/creativedash';
-            mockData.followers = 3200;
-          } else if (platformId === 'facebook') {
-            mockData.username = 'CreativeDash';
-            mockData.profileUrl = 'https://facebook.com/creativedash';
-            mockData.followers = 15800;
-          } else if (platformId === 'threads') {
-            mockData.username = '@creativedash';
-            mockData.profileUrl = 'https://threads.net/creativedash';
-            mockData.followers = 2400;
-          }
-          return {
-            ...account,
-            ...mockData
-          };
-        }
-        return account;
-      }));
-      toast.dismiss();
-      toast.success(`Successfully connected to ${platformId}`, {
-        description: 'Your account has been linked successfully.'
-      });
-    }, 2000);
+  // Connect a platform (Facebook: real OAuth2, others: placeholder)
+  const handleConnect = async (platformId: string) => {
+    if (!user?.id) {
+      toast.error('You must be logged in to connect accounts');
+      return;
+    }
+    if (platformId === 'facebook') {
+      const redirectUri = `${window.location.origin}/auth/callback/facebook`;
+      const url = getFacebookOAuthUrl(user.id, redirectUri);
+      window.location.href = url;
+      return;
+    }
+    if (platformId === 'linkedin') {
+      const redirectUri = `${window.location.origin}/auth/callback/linkedin`;
+      const url = getLinkedInOAuthUrl(user.id, redirectUri);
+      window.location.href = url;
+      return;
+    }
+    if (platformId === 'google') {
+      const redirectUri = `${window.location.origin}/auth/callback/google`;
+      const url = getGoogleOAuthUrl(user.id, redirectUri);
+      window.location.href = url;
+      return;
+    }
+    if (platformId === 'twitter' || platformId === 'x') {
+      const redirectUri = `${window.location.origin}/auth/callback/twitter`;
+      const codeChallenge = await generateCodeChallenge();
+      const url = getTwitterOAuthUrl(user.id, redirectUri, codeChallenge);
+      window.location.href = url;
+      return;
+    }
+    if (platformId === 'youtube') {
+      const redirectUri = `${window.location.origin}/auth/callback/youtube`;
+      const url = getYouTubeOAuthUrl(user.id, redirectUri);
+      window.location.href = url;
+      return;
+    }
+    if (platformId === 'instagram') {
+      const redirectUri = `${window.location.origin}/auth/callback/instagram`;
+      const url = getInstagramOAuthUrl(user.id, redirectUri);
+      window.location.href = url;
+      return;
+    }
+    if (platformId === 'tiktok') {
+      const redirectUri = `${window.location.origin}/auth/callback/tiktok`;
+      const url = getTikTokOAuthUrl(user.id, redirectUri);
+      window.location.href = url;
+      return;
+    }
+    // Placeholder for other platforms
+    toast.info('OAuth2 flow for this platform is not yet implemented.');
   };
   // Open disconnect confirmation modal
   const openDisconnectModal = (platformId: string) => {
@@ -128,32 +99,24 @@ export const ConnectedAccountsManager = () => {
     setIsDisconnecting(true);
   };
   // Confirm disconnect
-  const confirmDisconnect = () => {
+  const confirmDisconnect = async () => {
     if (!accountToDisconnect) return;
-    // In a real app, this would call an API to revoke access
-    toast.loading(`Disconnecting from ${accountToDisconnect}...`);
-    // Simulate API call
-    setTimeout(() => {
-      setAccounts(prev => prev.map(account => {
-        if (account.id === accountToDisconnect) {
-          return {
-            ...account,
-            connected: false,
-            username: undefined,
-            profileUrl: undefined,
-            lastRefreshed: undefined,
-            followers: undefined
-          };
-        }
-        return account;
-      }));
+    try {
+      toast.loading(`Disconnecting from ${accountToDisconnect}...`);
+      await socialService.disconnect(accountToDisconnect);
+      // Refresh accounts
+      const data = await socialService.getConnectedPlatforms();
+      setAccounts(data || []);
       setIsDisconnecting(false);
       setAccountToDisconnect(null);
       toast.dismiss();
       toast.success(`Disconnected from ${accountToDisconnect}`, {
         description: 'Your account has been unlinked successfully.'
       });
-    }, 1500);
+    } catch (err: any) {
+      toast.dismiss();
+      toast.error(`Failed to disconnect: ${err.message || err}`);
+    }
   };
   // Refresh account data
   const handleRefresh = (platformId: string) => {
@@ -194,6 +157,19 @@ export const ConnectedAccountsManager = () => {
     }
     return count.toString();
   };
+  // PKCE code challenge generator
+  async function generateCodeChallenge() {
+    const array = new Uint8Array(32);
+    window.crypto.getRandomValues(array);
+    const codeVerifier = btoa(String.fromCharCode(...array)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const encoder = new TextEncoder();
+    const data = encoder.encode(codeVerifier);
+    const digest = await window.crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(digest));
+    const codeChallenge = btoa(String.fromCharCode(...hashArray)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    sessionStorage.setItem('twitter_code_verifier', codeVerifier);
+    return codeChallenge;
+  }
   if (isLoading) {
     return <div className="flex items-center justify-center py-12">
         <LoaderIcon size={24} className="animate-spin text-indigo-500" />

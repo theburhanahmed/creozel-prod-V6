@@ -1,12 +1,16 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { SearchIcon, BellIcon, MailIcon, HelpCircleIcon, SettingsIcon, LogOutIcon, ChevronDownIcon, SunIcon, MoonIcon, CheckIcon, ClockIcon, XIcon, DollarSignIcon, CreditCardIcon, PlusCircleIcon, BarChart2Icon, TrendingUpIcon } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { SearchIcon, BellIcon, MailIcon, HelpCircleIcon, SettingsIcon, LogOutIcon, ChevronDownIcon, SunIcon, MoonIcon, CheckIcon, ClockIcon, XIcon, DollarSignIcon, CreditCardIcon, PlusCircleIcon, BarChart2Icon, TrendingUpIcon, RefreshCwIcon } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useCredits } from '../../hooks/useCredits';
+
 interface TopbarProps {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
   toggleMenu: () => void;
   isMobile: boolean;
 }
+
 export const Topbar = ({
   isDarkMode,
   toggleDarkMode,
@@ -21,6 +25,9 @@ export const Topbar = ({
   const notificationsRef = useRef<HTMLDivElement>(null);
   const mailboxRef = useRef<HTMLDivElement>(null);
   const creditsMenuRef = useRef<HTMLDivElement>(null);
+  const { logout, user } = useAuth();
+  const navigate = useNavigate();
+  const { creditsInfo, refreshCredits } = useCredits();
   // Add messages data
   const messages = [{
     id: 1,
@@ -67,11 +74,6 @@ export const Topbar = ({
     time: 'Yesterday',
     read: true
   }];
-  // Mock credits data
-  const creditsInfo = {
-    balance: 120,
-    lastPurchase: '2 days ago'
-  };
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
@@ -112,19 +114,32 @@ export const Topbar = ({
         <div className="flex items-center gap-1 pr-2">
           {/* Credits button */}
           <div className="relative" ref={creditsMenuRef}>
-            <button className="relative flex justify-center items-center w-auto px-2 h-9 rounded-lg overflow-hidden z-10 transition-all duration-300 ease-in-out" onClick={() => {
-            setShowCreditsMenu(!showCreditsMenu);
-            setShowMailbox(false);
-            setShowNotifications(false);
-            setShowProfileMenu(false);
-          }}>
+            <button 
+              className="relative flex justify-center items-center w-auto px-2 h-9 rounded-lg overflow-hidden z-10 transition-all duration-300 ease-in-out hover:bg-gray-100/10 dark:hover:bg-gray-800/20" 
+              onClick={() => {
+                setShowCreditsMenu(!showCreditsMenu);
+                setShowMailbox(false);
+                setShowNotifications(false);
+                setShowProfileMenu(false);
+              }}
+              disabled={creditsInfo.loading}
+            >
               <span className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 dark:bg-gray-800 rounded-md">
                 <span className="text-sm font-medium text-green-500">
                   Credits:
                 </span>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  120
-                </span>
+                {creditsInfo.loading ? (
+                  <div className="flex items-center gap-1">
+                    <RefreshCwIcon size={12} className="animate-spin text-gray-500" />
+                    <span className="text-sm font-medium text-gray-500">...</span>
+                  </div>
+                ) : creditsInfo.error ? (
+                  <span className="text-sm font-medium text-red-500">Error</span>
+                ) : (
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {creditsInfo.balance}
+                  </span>
+                )}
               </span>
             </button>
             {/* Credits dropdown */}
@@ -134,13 +149,39 @@ export const Topbar = ({
                     <p className="text-sm font-medium text-gray-900 dark:text-white">
                       Credits Balance
                     </p>
-                    <span className="text-lg font-bold text-green-600 dark:text-green-400">
-                      {creditsInfo.balance}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      {creditsInfo.loading ? (
+                        <RefreshCwIcon size={14} className="animate-spin text-gray-500" />
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            refreshCredits();
+                          }}
+                          className="p-1 hover:bg-gray-100/10 dark:hover:bg-gray-800/20 rounded transition-colors"
+                          title="Refresh credits"
+                        >
+                          <RefreshCwIcon size={14} className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300" />
+                        </button>
+                      )}
+                      <span className="text-lg font-bold text-green-600 dark:text-green-400">
+                        {creditsInfo.loading ? '...' : creditsInfo.balance}
+                      </span>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Last purchase: {creditsInfo.lastPurchase}
-                  </p>
+                  {creditsInfo.error ? (
+                    <p className="text-xs text-red-500 mt-1">
+                      {creditsInfo.error}
+                    </p>
+                  ) : creditsInfo.lastPurchase ? (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Last purchase: {creditsInfo.lastPurchase}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      No purchase history
+                    </p>
+                  )}
                 </div>
                 <div className="py-1">
                   <Link to="/credits/add" className="flex items-center px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100/10 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white transition-colors duration-200">
@@ -278,7 +319,13 @@ export const Topbar = ({
             setShowCreditsMenu(false);
           }}>
               <span className="absolute left-[12px] w-6 h-6 flex-shrink-0 z-20">
-                <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=100&q=80" alt="User avatar" className="w-6 h-6 rounded-full object-cover border border-white/[0.05]" />
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="User avatar" className="w-6 h-6 rounded-full object-cover border border-white/[0.05]" />
+                ) : (
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-medium border border-white/[0.05]">
+                    {(user?.name || user?.email || 'U').charAt(0).toUpperCase()}
+                  </div>
+                )}
               </span>
               <span className="absolute inset-0 bg-gradient-to-r from-gray-100/10 to-gray-100/5 dark:from-gray-800/20 dark:to-gray-800/10 translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-in-out" />
               <span className="text-sm text-gray-700 dark:text-gray-300 translate-x-full group-hover:translate-x-0 transition-all duration-300 ease-in-out text-center pl-7 w-full opacity-0 group-hover:opacity-100">
@@ -289,10 +336,10 @@ export const Topbar = ({
             {showProfileMenu && <div className="absolute right-0 mt-2 w-48 py-2 bg-white/[0.02] dark:bg-[#1A2234]/90 rounded-xl shadow-lg border border-white/[0.05] backdrop-blur-xl z-50 animate-in">
                 <div className="px-4 py-2 border-b border-gray-200/10 dark:border-gray-700">
                   <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    Nathan Collins
+                    {user?.name || user?.email?.split('@')[0] || 'User'}
                   </p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    @nathan_collins
+                    {user?.email || 'No email'}
                   </p>
                 </div>
                 <Link to="/settings" className="flex items-center px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100/10 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 hover:translate-x-1">
@@ -304,10 +351,16 @@ export const Topbar = ({
                   <span className="text-sm">Help</span>
                 </Link>
                 <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
-                <Link to="/auth/login" className="flex items-center px-4 py-2 text-red-600 dark:text-red-400 hover:bg-gray-100/10 dark:hover:bg-gray-800 hover:text-red-700 dark:hover:text-red-300 transition-colors duration-200 hover:translate-x-1">
+                <button
+                  onClick={async () => {
+                    await logout();
+                    navigate('/auth/login', { replace: true });
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-red-600 dark:text-red-400 hover:bg-gray-100/10 dark:hover:bg-gray-800 hover:text-red-700 dark:hover:text-red-300 transition-colors duration-200 hover:translate-x-1"
+                >
                   <LogOutIcon size={16} className="mr-2" />
                   <span className="text-sm">Logout</span>
-                </Link>
+                </button>
               </div>}
           </div>
         </div>

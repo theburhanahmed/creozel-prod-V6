@@ -13,50 +13,9 @@ export const SmartContentIdeas: React.FC<SmartContentIdeasProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  // Mock content ideas data
-  const contentIdeas = [{
-    id: '1',
-    title: '10 Productivity Hacks for Remote Workers',
-    description: 'Tips and tricks to stay productive while working from home',
-    category: 'productivity',
-    trending: true,
-    popularity: 95
-  }, {
-    id: '2',
-    title: 'How to Build a Morning Routine That Actually Works',
-    description: 'Science-backed strategies for creating an effective morning routine',
-    category: 'lifestyle',
-    trending: true,
-    popularity: 87
-  }, {
-    id: '3',
-    title: 'The Ultimate Guide to Time Blocking',
-    description: 'Master the time management technique used by top performers',
-    category: 'productivity',
-    trending: false,
-    popularity: 82
-  }, {
-    id: '4',
-    title: '5 Digital Tools to Organize Your Work Life',
-    description: 'Apps and services that will transform your workflow',
-    category: 'technology',
-    trending: false,
-    popularity: 78
-  }, {
-    id: '5',
-    title: 'Why Multitasking is Killing Your Productivity',
-    description: 'The science behind focus and how to improve it',
-    category: 'productivity',
-    trending: true,
-    popularity: 91
-  }, {
-    id: '6',
-    title: 'Mindfulness Techniques for Better Focus',
-    description: 'Simple meditation practices to improve concentration',
-    category: 'wellness',
-    trending: false,
-    popularity: 74
-  }];
+  // TODO: Fetch content ideas from production data source (Supabase or backend)
+  const [contentIdeas, setContentIdeas] = useState<any[]>([]);
+  // Example: useEffect(() => { fetchContentIdeas().then(setContentIdeas); }, []);
   const categories = [{
     id: 'all',
     name: 'All Ideas'

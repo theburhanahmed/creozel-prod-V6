@@ -9,6 +9,7 @@ export const MediaLibrary = () => {
   const [activeTab, setActiveTab] = useState('videos');
   const [viewMode, setViewMode] = useState('grid');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [mediaItems, setMediaItems] = useState<any[]>([]);
   const tabs = [{
     id: 'videos',
     label: 'Videos',
@@ -90,13 +91,13 @@ export const MediaLibrary = () => {
   const getActiveMedia = () => {
     switch (activeTab) {
       case 'videos':
-        return videos;
+        return mediaItems.filter(item => item.type === 'video');
       case 'images':
-        return images;
+        return mediaItems.filter(item => item.type === 'image');
       case 'audio':
-        return audio;
+        return mediaItems.filter(item => item.type === 'audio');
       default:
-        return [];
+        return mediaItems;
     }
   };
   const handleDeleteMedia = (id: string) => {

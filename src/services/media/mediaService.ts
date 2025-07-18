@@ -1,144 +1,146 @@
-import { apiClient } from '../api/apiClient';
-import { MEDIA_ENDPOINTS } from '../api/config';
+import { supabase } from '../../../supabase/client';
+
 export interface MediaItem {
   id: string;
-  name: string;
-  type: string;
-  size: string;
+  title: string;
+  type: 'image' | 'video' | 'audio' | 'document';
   url: string;
   thumbnail?: string;
-  modified: string;
-  starred?: boolean;
-  shared?: boolean;
-  tags?: string[];
-  metadata?: Record<string, any>;
+  size?: string;
+  duration?: string;
+  dimensions?: string;
+  created: string;
+  published: boolean;
 }
-export interface MediaSearchParams {
-  query?: string;
-  type?: string[];
-  tags?: string[];
-  starred?: boolean;
-  shared?: boolean;
-  sortBy?: string;
-  sortDirection?: 'asc' | 'desc';
-  page?: number;
-  limit?: number;
+
+export interface MediaData {
+  mediaItems: MediaItem[];
 }
-/**
- * Media service for handling media files
- */
+
 export const mediaService = {
-  /**
-   * Get list of media files
-   */
-  async getMediaList(params: MediaSearchParams = {}): Promise<{
-    items: MediaItem[];
-    total: number;
-  }> {
-    try {
-      // Build query string
-      const queryParams = new URLSearchParams();
-      if (params.query) queryParams.append('query', params.query);
-      if (params.type?.length) params.type.forEach(t => queryParams.append('type', t));
-      if (params.tags?.length) params.tags.forEach(t => queryParams.append('tag', t));
-      if (params.starred !== undefined) queryParams.append('starred', params.starred.toString());
-      if (params.shared !== undefined) queryParams.append('shared', params.shared.toString());
-      if (params.sortBy) queryParams.append('sortBy', params.sortBy);
-      if (params.sortDirection) queryParams.append('sortDirection', params.sortDirection);
-      if (params.page) queryParams.append('page', params.page.toString());
-      if (params.limit) queryParams.append('limit', params.limit.toString());
-      const url = `${MEDIA_ENDPOINTS.LIST_MEDIA}?${queryParams.toString()}`;
-      return await apiClient.get(url);
-    } catch (error) {
-      console.error('Get media list error:', error);
-      throw error;
+  async getMediaLibrary(): Promise<MediaData> {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      throw new Error('No active session');
+    }
+
+    const response = await fetch(`${process.env.VITE_SUPABASE_URL}/functions/v1/get-media-library`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch media library');
+    }
+
+    return await response.json();
+  },
+
+  async uploadMedia(file: File, title: string, type: string): Promise<MediaItem> {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      throw new Error('No active session');
+    }
+
+    // Upload file to Supabase Storage
+    const fileName = `${Date.now()}-${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('media')
+      .upload(fileName, file);
+
+    if (uploadError) {
+      throw new Error('Failed to upload file');
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('media')
+      .getPublicUrl(fileName);
+
+    // Save media item to database
+    const { data, error } = await supabase
+      .from('media_library')
+      .insert({
+        title,
+        media_type: type,
+        file_url: publicUrl,
+        file_size: file.size,
+        user_id: session.user.id
+      })
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error('Failed to save media item');
+    }
+
+    return {
+      id: data.id,
+      title: data.title,
+      type: data.media_type,
+      url: data.file_url,
+      thumbnail: data.thumbnail_url || data.file_url,
+      size: data.file_size,
+      duration: data.duration,
+      dimensions: data.dimensions,
+      created: new Date(data.created_at).toLocaleDateString(),
+      published: data.is_published || false
+    };
+  },
+
+  async deleteMedia(mediaId: string): Promise<void> {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      throw new Error('No active session');
+    }
+
+    const { error } = await supabase
+      .from('media_library')
+      .delete()
+      .eq('id', mediaId)
+      .eq('user_id', session.user.id);
+
+    if (error) {
+      throw new Error('Failed to delete media item');
     }
   },
-  /**
-   * Upload media file
-   */
-  async uploadMedia(file: File, metadata: Record<string, any> = {}): Promise<MediaItem> {
-    try {
-      return await apiClient.uploadMedia(MEDIA_ENDPOINTS.UPLOAD_MEDIA, file, metadata);
-    } catch (error) {
-      console.error('Upload media error:', error);
-      throw error;
+
+  async updateMedia(mediaId: string, updates: Partial<MediaItem>): Promise<MediaItem> {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      throw new Error('No active session');
     }
-  },
-  /**
-   * Delete media file
-   */
-  async deleteMedia(id: string): Promise<void> {
-    try {
-      const url = MEDIA_ENDPOINTS.DELETE_MEDIA.replace(':id', id);
-      await apiClient.delete(url);
-    } catch (error) {
-      console.error('Delete media error:', error);
-      throw error;
+
+    const { data, error } = await supabase
+      .from('media_library')
+      .update(updates)
+      .eq('id', mediaId)
+      .eq('user_id', session.user.id)
+      .select()
+      .single();
+
+    if (error) {
+      throw new Error('Failed to update media item');
     }
-  },
-  /**
-   * Get media details
-   */
-  async getMediaDetails(id: string): Promise<MediaItem> {
-    try {
-      const url = MEDIA_ENDPOINTS.GET_MEDIA_DETAILS.replace(':id', id);
-      return await apiClient.get(url);
-    } catch (error) {
-      console.error('Get media details error:', error);
-      throw error;
-    }
-  },
-  /**
-   * Update media metadata
-   */
-  async updateMedia(id: string, updates: Partial<MediaItem>): Promise<MediaItem> {
-    try {
-      const url = MEDIA_ENDPOINTS.UPDATE_MEDIA.replace(':id', id);
-      return await apiClient.put(url, updates);
-    } catch (error) {
-      console.error('Update media error:', error);
-      throw error;
-    }
-  },
-  /**
-   * Toggle star status
-   */
-  async toggleStar(id: string, starred: boolean): Promise<MediaItem> {
-    try {
-      const url = MEDIA_ENDPOINTS.UPDATE_MEDIA.replace(':id', id);
-      return await apiClient.put(url, {
-        starred
-      });
-    } catch (error) {
-      console.error('Toggle star error:', error);
-      throw error;
-    }
-  },
-  /**
-   * Toggle share status
-   */
-  async toggleShare(id: string, shared: boolean): Promise<MediaItem> {
-    try {
-      const url = MEDIA_ENDPOINTS.UPDATE_MEDIA.replace(':id', id);
-      return await apiClient.put(url, {
-        shared
-      });
-    } catch (error) {
-      console.error('Toggle share error:', error);
-      throw error;
-    }
-  },
-  /**
-   * Search media files
-   */
-  async searchMedia(query: string): Promise<MediaItem[]> {
-    try {
-      const url = `${MEDIA_ENDPOINTS.SEARCH_MEDIA}?query=${encodeURIComponent(query)}`;
-      return await apiClient.get(url);
-    } catch (error) {
-      console.error('Search media error:', error);
-      throw error;
-    }
+
+    return {
+      id: data.id,
+      title: data.title,
+      type: data.media_type,
+      url: data.file_url,
+      thumbnail: data.thumbnail_url || data.file_url,
+      size: data.file_size,
+      duration: data.duration,
+      dimensions: data.dimensions,
+      created: new Date(data.created_at).toLocaleDateString(),
+      published: data.is_published || false
+    };
   }
-};
+}; 

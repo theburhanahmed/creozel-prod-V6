@@ -4,88 +4,8 @@ import { ClipboardCopyIcon, QrCodeIcon, UsersIcon, DollarSignIcon, CreditCardIco
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Modal } from '../ui/Modal';
-// Mock affiliate data
-const MOCK_AFFILIATE_DATA = {
-  referralCode: 'alex123',
-  referralLink: 'https://app.example.com/ref?code=alex123',
-  stats: {
-    totalReferrals: 28,
-    totalEarnings: 842.5,
-    pendingPayouts: 175.25,
-    totalClicks: 324,
-    conversionRate: '8.6%',
-    currentMonth: {
-      referrals: 5,
-      earnings: 142.5,
-      clicks: 67
-    }
-  },
-  referrals: [{
-    id: 1,
-    name: 'Sarah Johnson',
-    email: 'sarah.j@example.com',
-    joinDate: '2023-08-15',
-    status: 'subscribed',
-    plan: 'Pro',
-    commission: 45.0,
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&h=120&fit=crop&crop=face'
-  }, {
-    id: 2,
-    name: 'Michael Chen',
-    email: 'mchen@example.com',
-    joinDate: '2023-09-02',
-    status: 'active',
-    plan: 'Basic',
-    commission: 25.0,
-    avatar: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=120&h=120&fit=crop&crop=face'
-  }, {
-    id: 3,
-    name: 'Taylor Wilson',
-    email: 'taylor.w@example.com',
-    joinDate: '2023-09-18',
-    status: 'inactive',
-    plan: 'Free',
-    commission: 0,
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&h=120&fit=crop&crop=face'
-  }, {
-    id: 4,
-    name: 'Jessica Martinez',
-    email: 'jmartinez@example.com',
-    joinDate: '2023-07-29',
-    status: 'subscribed',
-    plan: 'Enterprise',
-    commission: 75.0,
-    avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?w=120&h=120&fit=crop&crop=face'
-  }, {
-    id: 5,
-    name: 'David Kim',
-    email: 'dkim@example.com',
-    joinDate: '2023-08-10',
-    status: 'subscribed',
-    plan: 'Pro',
-    commission: 45.0,
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&h=120&fit=crop&crop=face'
-  }],
-  payoutHistory: [{
-    id: 'pay-001',
-    date: '2023-08-01',
-    amount: 250.0,
-    status: 'completed',
-    method: 'PayPal'
-  }, {
-    id: 'pay-002',
-    date: '2023-07-01',
-    amount: 175.0,
-    status: 'completed',
-    method: 'Bank Transfer'
-  }, {
-    id: 'pay-003',
-    date: '2023-06-01',
-    amount: 195.0,
-    status: 'completed',
-    method: 'PayPal'
-  }]
-};
+// TODO: Fetch affiliate data from production data source (Supabase or backend)
+// Remove MOCK_AFFILIATE_DATA
 // QR Code component (simplified)
 const QRCode = ({
   value
@@ -140,7 +60,8 @@ export const AffiliateProgram = () => {
   const [inviteMessage, setInviteMessage] = useState("Hey! I think you'll love this platform. Use my referral link to sign up and we both get rewards!");
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
-  const [affiliateData, setAffiliateData] = useState(MOCK_AFFILIATE_DATA);
+  const [affiliateData, setAffiliateData] = useState<any>(null);
+  // Example: useEffect(() => { fetchAffiliateData().then(setAffiliateData); }, []);
   // Copy referral link
   const copyReferralLink = () => {
     navigator.clipboard.writeText(affiliateData.referralLink);
@@ -199,11 +120,21 @@ export const AffiliateProgram = () => {
       case 'active':
         return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
       case 'inactive':
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300';
+        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
     }
   };
+  // Fix linter errors for parameter types
+  const renderReferralRow = (referral: any) => {
+    // ... existing code ...
+  };
+  const renderPayoutRow = (payout: any) => {
+    // ... existing code ...
+  };
+  if (!affiliateData) {
+    return <div className="flex items-center justify-center min-h-[300px] text-gray-500 dark:text-gray-300">Loading affiliate data...</div>;
+  }
   return <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>

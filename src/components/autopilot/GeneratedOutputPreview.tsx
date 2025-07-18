@@ -85,23 +85,9 @@ export const GeneratedOutputPreview: React.FC<GeneratedOutputPreviewProps> = ({
     }
   };
   const renderVideoPreview = () => {
-    // Mock video data
-    const scenes = [{
-      time: '0:00',
-      title: 'Introduction'
-    }, {
-      time: '0:15',
-      title: 'Main Point 1'
-    }, {
-      time: '0:32',
-      title: 'Main Point 2'
-    }, {
-      time: '0:48',
-      title: 'Call to Action'
-    }, {
-      time: '1:00',
-      title: 'Conclusion'
-    }];
+    // TODO: Fetch scenes from production data source (Supabase or backend)
+    const scenes: any[] = [];
+    // Example: useEffect(() => { fetchScenes().then(setScenes); }, []);
     return <div className="space-y-4">
         <div className="relative aspect-video bg-gray-800 rounded-lg overflow-hidden">
           <img src="https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&auto=format&fit=crop" alt="Video thumbnail" className="w-full h-full object-cover opacity-90" />
@@ -131,7 +117,7 @@ export const GeneratedOutputPreview: React.FC<GeneratedOutputPreviewProps> = ({
             </Button>
           </div>
           {showDetails && <div className="divide-y divide-gray-200 dark:divide-gray-700">
-              {scenes.map((scene, index) => <div key={index} className={`p-3 flex items-center justify-between ${currentSlide === index ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}>
+              {(scenes as any[]).map((scene, index) => <div key={index} className={`p-3 flex items-center justify-between ${currentSlide === index ? 'bg-indigo-50 dark:bg-indigo-900/20' : ''}`}>
                   <div className="flex items-center">
                     <div className={`w-6 h-6 rounded-full flex items-center justify-center mr-3 ${currentSlide === index ? 'bg-indigo-500 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'}`}>
                       {index + 1}

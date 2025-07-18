@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { ContentLayout } from '../../components/layout/ContentLayout';
@@ -6,6 +6,9 @@ import { MicIcon, UploadIcon, SparklesIcon, Volume2Icon, LoaderIcon, VolumeXIcon
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { CardMenu } from '../../components/ui/Card';
+import { supabase } from '../../../supabase/client';
+import { useContentCharge } from '../../hooks/useContentCharge';
+
 export const AudioEditor = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -13,25 +16,45 @@ export const AudioEditor = () => {
   const [volume, setVolume] = useState(1);
   const [selectedVoice, setSelectedVoice] = useState('female1');
   const [script, setScript] = useState('');
-  const handleGenerate = () => {
+  const [userId, setUserId] = useState('');
+
+  useEffect(() => {
+    supabase.auth.getUser().then(res => {
+      if (res?.data?.user?.id) setUserId(res.data.user.id);
+    });
+  }, []);
+
+  const contentType = 'audio';
+  const { chargeInfo, loading: chargeLoading, error: chargeError } = useContentCharge({ userId, contentType });
+
+  const handleGenerate = async () => {
     if (!script.trim()) {
       toast.error('Please enter some text to convert');
       return;
     }
     setIsGenerating(true);
-    // Simulate generation
-    setTimeout(() => {
-      setIsGenerating(false);
-      setAudioUrl('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-content', {
+        body: { type: 'audio', prompt: script, options: { voice: selectedVoice } },
+      });
+      if (error || data?.error) throw error || new Error(data?.error);
+      setAudioUrl(data?.content?.audio_base64 || data?.content?.url || data?.content || '');
       toast.success('Audio generated successfully!');
-    }, 2000);
+    } catch (error: any) {
+      toast.error('Failed to generate audio', { description: error.message || 'Unknown error' });
+    } finally {
+      setIsGenerating(false);
+    }
   };
+
   const handlePlayPause = () => {
     setIsPlaying(!isPlaying);
   };
+
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setVolume(parseFloat(e.target.value));
   };
+
   return <div className="max-w-6xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -121,6 +144,22 @@ export const AudioEditor = () => {
                     </div>
                   </div>)}
               </div>
+            </div>
+            {/* Charge Preview */}
+            <div>
+              {chargeLoading ? (
+                <span>Loading charge...</span>
+              ) : chargeError ? (
+                <span className="text-red-500">Charge unavailable</span>
+              ) : chargeInfo ? (
+                <span>
+                  <strong>Charge:</strong> {chargeInfo.finalCharge?.toFixed(2)} credits
+                  <br />
+                  <small>
+                    (Base: {chargeInfo.cost_per_unit} + Profit: {chargeInfo.profit_percent}%)
+                  </small>
+                </span>
+              ) : null}
             </div>
             <Button variant="primary" size="lg" leftIcon={isGenerating ? <LoaderIcon className="animate-spin" /> : <SparklesIcon />} onClick={handleGenerate} disabled={isGenerating || !script.trim()} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
               {isGenerating ? 'Generating...' : 'Generate Audio'}

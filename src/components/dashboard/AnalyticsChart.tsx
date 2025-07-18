@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { createClient } from '../../../supabase/client';
+import { supabase } from '../../../supabase/client';
 
 export const AnalyticsChart = () => {
   const [timeRange, setTimeRange] = useState('year');
@@ -153,7 +153,7 @@ export const SupabaseDemo: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
-      const { data, error } = await createClient().from('analytics').select('*');
+      const { data, error } = await supabase.from('analytics').select('*');
       if (error) setError(error.message);
       else setRows(data || []);
       setLoading(false);

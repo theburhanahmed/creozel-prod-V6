@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { handleCors, createResponse } from "../_shared/cors.ts"
 import { authenticateRequest } from "../_shared/auth.ts"
+import Cron from "https://deno.land/x/croner@7.0.4/dist/croner.js"
 
 serve(async (req) => {
   // Handle CORS
@@ -28,11 +29,13 @@ serve(async (req) => {
       )
     }
 
-    // Simple next run calculation (for demo - in production use proper cron parser)
+    // Parse cron expression for next run (Deno-native)
     let nextRunAt: Date
     try {
-      // For demo, just add 1 hour
-      nextRunAt = new Date(Date.now() + 60 * 60 * 1000)
+      const cron = new Cron(cronExpression)
+      const next = cron.next()
+      if (!next) throw new Error("Could not determine next run date from cron expression")
+      nextRunAt = next
     } catch (error) {
       return createResponse(
         {
@@ -42,13 +45,18 @@ serve(async (req) => {
       )
     }
 
-    // Update pipeline with new schedule
+    // Determine new status
+    let newStatus = "active"
+    if (action === "pause") newStatus = "paused"
+    if (action === "resume") newStatus = "active"
+
+    // Update pipeline with new schedule and status
     const { data, error } = await supabase
       .from("pipelines")
       .update({
         schedule_cron: cronExpression,
         next_run_at: nextRunAt.toISOString(),
-        status: action === "pause" ? "paused" : "active",
+        status: newStatus,
       })
       .eq("id", pipelineId)
       .eq("user_id", user.id) // Ensure user owns the pipeline
@@ -63,6 +71,7 @@ serve(async (req) => {
       success: true,
       pipeline: data,
       nextRunAt: nextRunAt.toISOString(),
+      status: newStatus,
     })
   } catch (error) {
     console.error("Error in schedule-pipeline function:", error)

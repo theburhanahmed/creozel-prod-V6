@@ -1,63 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { PlusIcon, UsersIcon, SearchIcon, FilterIcon, UserPlusIcon } from 'lucide-react';
 import { TeamMemberCard } from '../components/team/TeamMemberCard';
 import { InviteMemberModal } from '../components/team/InviteMemberModal';
 import { toast } from 'sonner';
-interface TeamMember {
-  id: string;
-  name: string;
-  email: string;
-  role: 'owner' | 'admin' | 'editor' | 'viewer';
-  avatar?: string;
-  status: 'active' | 'pending' | 'inactive';
-  lastActive?: string;
-}
+import { teamService, TeamMember } from '../services/team/teamService';
 export const Team = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
-  // Mock team members data
-  const teamMembers: TeamMember[] = [{
-    id: '1',
-    name: 'John Smith',
-    email: 'john@example.com',
-    role: 'owner',
-    avatar: 'https://randomuser.me/api/portraits/men/1.jpg',
-    status: 'active',
-    lastActive: 'Now'
-  }, {
-    id: '2',
-    name: 'Sarah Johnson',
-    email: 'sarah@example.com',
-    role: 'admin',
-    avatar: 'https://randomuser.me/api/portraits/women/2.jpg',
-    status: 'active',
-    lastActive: '5m ago'
-  }, {
-    id: '3',
-    name: 'Michael Chen',
-    email: 'michael@example.com',
-    role: 'editor',
-    avatar: 'https://randomuser.me/api/portraits/men/3.jpg',
-    status: 'active',
-    lastActive: '1h ago'
-  }, {
-    id: '4',
-    name: 'Emily Davis',
-    email: 'emily@example.com',
-    role: 'viewer',
-    status: 'pending'
-  }, {
-    id: '5',
-    name: 'Alex Rodriguez',
-    email: 'alex@example.com',
-    role: 'editor',
-    avatar: 'https://randomuser.me/api/portraits/men/4.jpg',
-    status: 'active',
-    lastActive: '2h ago'
-  }];
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch team members
+  useEffect(() => {
+    const fetchTeamMembers = async () => {
+      try {
+        setLoading(true);
+        const data = await teamService.getTeamMembers();
+        setTeamMembers(data.teamMembers);
+      } catch (error) {
+        console.error('Failed to fetch team members:', error);
+        toast.error('Failed to load team members');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTeamMembers();
+  }, []);
   const handleInviteMember = (data: {
     email: string;
     role: string;

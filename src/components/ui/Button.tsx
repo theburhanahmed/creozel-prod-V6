@@ -1,4 +1,4 @@
-import React, { forwardRef } from 'react';
+import React, { forwardRef, ReactNode, ButtonHTMLAttributes } from 'react';
 import { Link } from 'react-router-dom';
 import { Loader2Icon } from 'lucide-react';
 type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'neon';
@@ -14,6 +14,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   as?: React.ElementType;
   to?: string;
   fullWidth?: boolean;
+  className?: string;
 }
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
   children,
@@ -62,26 +63,26 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({
   `;
   // If we're using a custom component (like Link)
   if (as === Link && to) {
-    return <Link to={to} className={buttonStyles} {...props}>
-          {leftIcon && <span className="mr-2 transform group-hover:scale-110 transition-transform">
-              {leftIcon}
-            </span>}
-          {children}
-          {rightIcon && <span className="ml-2 transform group-hover:scale-110 transition-transform">
-              {rightIcon}
-            </span>}
-        </Link>;
+    return <Link to={to} className={buttonStyles}>
+      {leftIcon && <span className="mr-2 transform group-hover:scale-110 transition-transform">
+        {leftIcon}
+      </span>}
+      {children}
+      {rightIcon && <span className="ml-2 transform group-hover:scale-110 transition-transform">
+        {rightIcon}
+      </span>}
+    </Link>;
   }
   // Standard button
   return <button ref={ref} className={buttonStyles} disabled={disabled || isLoading} {...props}>
-        {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
-        {!isLoading && leftIcon && <span className="mr-2 transform group-hover:scale-110 transition-transform">
-            {leftIcon}
-          </span>}
-        {isLoading && loadingText ? loadingText : children}
-        {!isLoading && rightIcon && <span className="ml-2 transform group-hover:scale-110 transition-transform">
-            {rightIcon}
-          </span>}
-      </button>;
+    {isLoading && <Loader2Icon className="mr-2 h-4 w-4 animate-spin" />}
+    {!isLoading && leftIcon && <span className="mr-2 transform group-hover:scale-110 transition-transform">
+      {leftIcon}
+    </span>}
+    {isLoading && loadingText ? loadingText : children}
+    {!isLoading && rightIcon && <span className="ml-2 transform group-hover:scale-110 transition-transform">
+      {rightIcon}
+    </span>}
+  </button>;
 });
 Button.displayName = 'Button';
