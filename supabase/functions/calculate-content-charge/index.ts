@@ -25,7 +25,7 @@ serve(async (req) => {
     if (!actualProviderId) {
       const { data: provider, error: providerError } = await supabaseClient
         .from("ai_providers")
-        .select("id")
+        .select("id, price_per_1k_tokens, price_per_image, price_per_video_min, profit_margin_percent")
         .eq("type", contentType)
         .eq("is_default", true)
         .eq("is_active", true)
@@ -39,20 +39,50 @@ serve(async (req) => {
       actualProviderId = provider.id
     }
 
-    // 2. Fetch cost and profit percent
-    const { data, error } = await supabaseClient.rpc("get_provider_cost_and_profit", {
-      p_user_id: userId,
-      p_provider_id: actualProviderId,
-      p_content_type: contentType,
-    })
-    if (error || !data || !data[0]) {
-      return new Response(JSON.stringify({ error: "Pricing info not found" }), {
+    // 1b. Fetch provider record by actualProviderId to ensure we have pricing fields
+    const { data: provider, error: providerFetchError } = await supabaseClient
+      .from("ai_providers")
+      .select("id, price_per_1k_tokens, price_per_image, price_per_video_min, profit_margin_percent")
+      .eq("id", actualProviderId)
+      .eq("is_active", true)
+      .single()
+    if (providerFetchError || !provider) {
+      return new Response(JSON.stringify({ error: "Provider not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+
+    // 2. Calculate pricing locally using provider record
+    let baseCost = 0
+    switch (contentType) {
+      case "text":
+      case "audio": {
+        const tokensPerK = 1 // assume 1k tokens preview
+        baseCost = (provider.price_per_1k_tokens || 0) * tokensPerK
+        break
+      }
+      case "image": {
+        baseCost = provider.price_per_image || 0
+        break
+      }
+      case "video": {
+        baseCost = (provider.price_per_video_min || 0) * 1 // assume 1 min preview
+        break
+      }
+      default:
+        baseCost = 0
+    }
+    const cost_per_unit = baseCost
+    const profit_percent = provider.profit_margin_percent || 0
+    const finalCharge = cost_per_unit * (1 + profit_percent / 100)
+
+    if (finalCharge <= 0) {
+      return new Response(JSON.stringify({ error: "Pricing not configured" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
-    const { cost_per_unit, profit_percent } = data[0]
-    const finalCharge = cost_per_unit * (1 + profit_percent / 100)
 
     return new Response(
       JSON.stringify({

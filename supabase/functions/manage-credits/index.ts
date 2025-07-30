@@ -5,6 +5,7 @@ import { Deno } from "https://deno.land/std@0.168.0/node/global.ts" // Declare D
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
 }
 
 interface CreditRequest {
@@ -51,15 +52,14 @@ serve(async (req) => {
         })
       }
 
-      const { data: transactions, error: transError } = await supabaseClient
+      const { data: transactions, error: transactionsError } = await supabaseClient
         .from("credit_transactions")
         .select("*")
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
-        .limit(50)
 
-      if (transError) {
-        return new Response(JSON.stringify({ error: transError.message }), {
+      if (transactionsError) {
+        return new Response(JSON.stringify({ error: transactionsError.message }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         })
@@ -67,8 +67,8 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({
-          credits: userData.credits,
-          transactions,
+          balance: userData?.credits || 0,
+          transactions: transactions || [],
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       )

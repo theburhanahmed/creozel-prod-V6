@@ -33,7 +33,7 @@ serve(async (req) => {
     // 1. Fetch default provider for this content type
     const { data: provider, error: providerError } = await supabaseClient
       .from("ai_providers")
-      .select("id, name, type, config, is_default, is_active")
+      .select("id, name, type, config, is_default, is_active, price_per_1k_tokens, price_per_image, price_per_video_min, profit_margin_percent")
       .eq("type", type)
       .eq("is_default", true)
       .eq("is_active", true)
@@ -45,20 +45,50 @@ serve(async (req) => {
       })
     }
 
-    // 2. Calculate charge using DB function
-    const { data: chargeData, error: chargeError } = await supabaseClient.rpc("get_provider_cost_and_profit", {
+    // 2. Calculate charge based on provider pricing and admin profit margin
+    let baseCost = 0
+    switch (type) {
+      case "text":
+      case "audio": {
+        const tokensPerK = options.tokens ?? 1000 // caller can pass estimated tokens
+        baseCost = (provider.price_per_1k_tokens || 0) * (tokensPerK / 1000)
+        break
+      }
+      case "image": {
+        baseCost = provider.price_per_image || 0
+        break
+      }
+      case "video": {
+        const durationMin = options.durationMinutes ?? 1
+        baseCost = (provider.price_per_video_min || 0) * durationMin
+        break
+      }
+      default:
+        baseCost = 0
+    }
+
+    const cost_per_unit = baseCost
+    const profit_percent = provider.profit_margin_percent || 0
+    const finalCharge = cost_per_unit * (1 + profit_percent / 100)
+
+    if (finalCharge <= 0) {
+      return new Response(JSON.stringify({ error: "Pricing not configured for selected provider/content type" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      })
+    }
+    // pricing calculated locally; RPC removed
       p_user_id: user.id,
       p_provider_id: provider.id,
       p_content_type: type,
     })
-    if (chargeError || !chargeData || !chargeData[0]) {
+    /* removed obsolete chargeData logic
       return new Response(JSON.stringify({ error: "Pricing info not found" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       })
     }
-    const { cost_per_unit, profit_percent } = chargeData[0]
-    const finalCharge = cost_per_unit * (1 + profit_percent / 100)
+    
 
     // 3. Check user credits
     const { data: userData, error: userError } = await supabaseClient

@@ -129,16 +129,82 @@ serve(async (req) => {
             .update({ status: "processing", updated_at: new Date().toISOString() })
             .eq("id", item.id)
 
-          // For now, just mark as posted (implement actual posting logic later)
+          // --- Real posting implementation start ---
+          // 1. Fetch OAuth connection for this account
+          const { data: connRows, error: connErr } = await supabase
+            .from<Omit<OAuthConnection, "additional_data"> & { additional_data: any }>(
+              "oauth_connections",
+            )
+            .select("*")
+            .eq("id", item.account_id)
+            .limit(1)
+            .maybeSingle()
+
+          if (connErr || !connRows) {
+            throw new Error(`OAuth connection not found for account_id ${item.account_id}`)
+          }
+
+          // 2. Fetch the content we need to post
+          const { data: contentRow, error: contentErr } = await supabase
+            .from<GeneratedContent>("generated_content")
+            .select("*")
+            .eq("id", item.content_id)
+            .limit(1)
+            .maybeSingle()
+
+          if (contentErr || !contentRow) {
+            throw new Error(`Content not found for content_id ${item.content_id}`)
+          }
+
+          // Generate a public URL if media exists
+          let contentUrl: string | null = null
+          if (contentRow.storage_path) {
+            const { data: pub } = supabase.storage
+              .from("generated")
+              .getPublicUrl(contentRow.storage_path)
+            contentUrl = pub.publicUrl || null
+          }
+
+          // 3. Get platform poster function
+          const poster = platformPostFunctions[item.platform]
+          if (!poster) {
+            throw new Error(`Platform '${item.platform}' is not supported`)
+          }
+
+          // 4. Call poster
+          const postResult: any = await poster({
+            connection: connRows,
+            content: contentRow,
+            contentUrl,
+            postConfig: item.post_config || {},
+          })
+
+          if (!postResult.success) {
+            throw new Error(postResult.error || "Unknown error from poster")
+          }
+
+          // 5. Update queue row with success result
           await supabase
             .from("posting_queue")
             .update({
               status: "posted",
               updated_at: new Date().toISOString(),
-              platform_post_id: `mock_${Date.now()}`,
-              platform_post_url: `https://example.com/post/${Date.now()}`,
+              platform_post_id: postResult.platform_post_id || postResult.postId,
+              platform_post_url: postResult.platform_post_url || postResult.postUrl,
+              posted_at: postResult.posted_at || new Date().toISOString(),
             })
             .eq("id", item.id)
+
+          // Notify user
+          await notifyUser(
+            supabase,
+            item.user_id,
+            `Post Success: ${item.platform}`,
+            `Content posted successfully to ${item.platform}.`,
+            "success",
+            postResult.postUrl || null,
+          )
+          // --- Real posting implementation end ---
 
           await notifyUser(
             supabase,

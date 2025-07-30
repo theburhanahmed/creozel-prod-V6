@@ -54,38 +54,50 @@ export const Sidebar = ({
     title: 'Social',
     href: '/social-accounts'
   }];
-  return <div id={id} className="fixed left-4 top-20 bg-white/[0.02] backdrop-blur-md border border-white/[0.05] rounded-xl shadow-lg flex flex-col gap-1.5 z-40 transition-all duration-300 p-2">
-      {menuItems.map(item => <Link key={item.href} to={item.href} className={`
-            relative flex items-center w-10 h-10 rounded-lg overflow-hidden
-            transition-all duration-300 ease-in-out group
-            hover:w-[120px]
-            ${isActive(item.href) ? 'bg-gradient-to-r from-green-500/90 to-emerald-600/90 text-white' : ''}
-          `}>
-          {/* Hover background effect */}
-          <span className="absolute inset-0 bg-gradient-to-r from-gray-100/10 to-gray-100/5 dark:from-gray-800/20 dark:to-gray-800/10 translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-in-out" />
-          {/* Blur effect on hover */}
-          <span className="absolute inset-0 backdrop-blur-[8px] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          {/* Glass effect */}
-          <span className="absolute inset-0 backdrop-blur-sm bg-white/[0.01] dark:bg-black/[0.01] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg" />
-          {/* Icon */}
-          <span className={`
-              relative z-10 w-10 h-10 flex items-center justify-center flex-shrink-0
-              transition-all duration-300 group-hover:scale-105
-              ${isActive(item.href) ? 'text-white' : 'text-gray-700 dark:text-gray-300'}
-            `}>
-            {item.icon}
-          </span>
-          {/* Title with fade in animation */}
-          <span className={`
-              relative z-10 text-sm font-medium whitespace-nowrap
-              transition-all duration-300 ease-in-out pl-0.5 pr-3
-              ${isActive(item.href) ? 'text-white' : 'text-gray-700 dark:text-gray-300'}
-              opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0
-            `}>
-            {item.title}
-          </span>
-          {/* Active indicator */}
-          {isActive(item.href) && <span className="absolute inset-0 bg-gradient-to-b from-white/[0.07] to-transparent opacity-50" />}
-        </Link>)}
+  return <div id={id} className="fixed left-4 top-20 bg-white/[0.02] backdrop-blur-md border border-white/[0.05] rounded-xl shadow-lg flex flex-col z-40 p-2 w-[56px] overflow-visible">
+      {menuItems.map((item, index) => (
+        <div key={item.href} className="relative h-10 mb-1.5 last:mb-0">
+          <Link 
+            to={item.href} 
+            className={`
+              relative flex items-center h-10 rounded-lg
+              transition-all duration-300 ease-in-out group
+              ${isActive(item.href) ? 'bg-gradient-to-r from-green-500/90 to-emerald-600/90 text-white' : ''}
+            `}
+            style={{ width: '40px' }}
+          >
+            {/* Hover background effect */}
+            <span className="absolute inset-0 bg-gradient-to-r from-gray-100/10 to-gray-100/5 dark:from-gray-800/20 dark:to-gray-800/10 translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-in-out" />
+            {/* Blur effect on hover */}
+            <span className="absolute inset-0 backdrop-blur-[8px] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            {/* Glass effect */}
+            <span className="absolute inset-0 backdrop-blur-sm bg-white/[0.01] dark:bg-black/[0.01] opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg" />
+            {/* Icon */}
+            <span className={`
+                relative z-10 w-10 h-10 flex items-center justify-center flex-shrink-0
+                transition-all duration-300 group-hover:scale-105
+                ${isActive(item.href) ? 'text-white' : 'text-gray-700 dark:text-gray-300'}
+              `}>
+              {item.icon}
+            </span>
+            {/* Title with fade in animation */}
+            <span className={`
+                absolute left-10 top-1/2 -translate-y-1/2 ml-2
+                text-sm font-medium whitespace-nowrap
+                transition-all duration-300 ease-in-out
+                ${isActive(item.href) ? 'text-white' : 'text-gray-700 dark:text-gray-300'}
+                opacity-0 group-hover:opacity-100 group-hover:translate-x-2
+                bg-white/90 dark:bg-gray-800/90 px-3 py-1 rounded-md shadow-lg
+                pointer-events-none
+              `}>
+              {item.title}
+            </span>
+            {/* Active indicator */}
+            {isActive(item.href) && (
+              <span className="absolute inset-0 bg-gradient-to-b from-white/[0.07] to-transparent opacity-50" />
+            )}
+          </Link>
+        </div>
+      ))}
     </div>;
 };

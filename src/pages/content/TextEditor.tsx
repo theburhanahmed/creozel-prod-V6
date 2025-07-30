@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import RichTextEditor from '../../components/content/RichTextEditor';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import { CopyIcon, EditIcon, SendIcon, ArrowRightIcon, CheckIcon, SparklesIcon, VideoIcon, RefreshCwIcon, ChevronLeftIcon, FileTextIcon, ImageIcon, MicIcon } from 'lucide-react';
@@ -12,7 +13,7 @@ import { useContentCharge } from '../../hooks/useContentCharge';
 export const TextEditor = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [contentType, setContentType] = useState('caption');
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(''); // holds HTML/string from rich text editor
   const [generatedText, setGeneratedText] = useState('');
   const [copied, setCopied] = useState(false);
   const [showEditView, setShowEditView] = useState(false);
@@ -159,10 +160,10 @@ export const TextEditor = () => {
             </div>
             {/* Prompt Input */}
             <div>
-              <label htmlFor="prompt" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 What would you like to create?
               </label>
-              <textarea id="prompt" value={prompt} onChange={e => setPrompt(e.target.value)} placeholder={placeholders[contentType]} className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500" rows={4} />
+              <RichTextEditor value={prompt} onChange={setPrompt} placeholder={placeholders[contentType]} contentType={contentType} />
             </div>
             {/* Charge Preview */}
             <div>

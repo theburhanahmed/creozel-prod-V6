@@ -169,6 +169,24 @@ class CreditsService {
   }
 
   /**
+   * Charge user a given amount of credits for AI usage.
+   * Returns true if deduction succeeded or false if insufficient credits / error.
+   */
+  async chargeForAI(amount: number = 1, description: string = 'AI content generation'): Promise<boolean> {
+    try {
+      const hasCredits = await this.hasSufficientCredits(amount);
+      if (!hasCredits) {
+        return false;
+      }
+      const result = await this.deductCredits(amount, description);
+      return result.success;
+    } catch (error) {
+      console.error('Error charging credits for AI:', error);
+      return false;
+    }
+  }
+
+  /**
    * Get credit transaction history
    */
   async getTransactionHistory(limit: number = 50): Promise<CreditTransaction[]> {
