@@ -200,4 +200,4 @@ class CreditsService {
   }
 }
 
-export const creditsService = new CreditsService(); 
+export const creditsService = new CreditsService();

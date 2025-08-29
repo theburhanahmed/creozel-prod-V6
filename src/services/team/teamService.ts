@@ -92,4 +92,4 @@ export const teamService = {
       throw new Error('Failed to remove team member');
     }
   }
-}; 
+};

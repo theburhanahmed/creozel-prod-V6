@@ -39,4 +39,4 @@ const TwitterCallback: React.FC = () => {
   );
 };
 
-export default TwitterCallback; 
+export default TwitterCallback;

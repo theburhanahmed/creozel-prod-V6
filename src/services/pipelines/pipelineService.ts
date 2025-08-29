@@ -127,4 +127,4 @@ export const pipelineService = {
       throw new Error('Failed to delete pipeline');
     }
   }
-}; 
+};

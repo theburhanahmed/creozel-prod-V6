@@ -37,4 +37,4 @@ const TikTokCallback: React.FC = () => {
   );
 };
 
-export default TikTokCallback; 
+export default TikTokCallback;

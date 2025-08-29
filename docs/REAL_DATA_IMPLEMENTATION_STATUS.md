@@ -73,7 +73,7 @@ This document tracks the progress of replacing all hardcoded, mocked data, and p
 To fully support real data, the following database tables need to be created:
 
 ### 1. User Profiles
-```sql
+\`\`\`sql
 CREATE TABLE user_profiles (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -87,10 +87,10 @@ CREATE TABLE user_profiles (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-```
+\`\`\`
 
 ### 2. Team Members
-```sql
+\`\`\`sql
 CREATE TABLE team_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   team_id UUID NOT NULL,
@@ -101,10 +101,10 @@ CREATE TABLE team_members (
   joined_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-```
+\`\`\`
 
 ### 3. Content Pipelines
-```sql
+\`\`\`sql
 CREATE TABLE content_pipelines (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -118,10 +118,10 @@ CREATE TABLE content_pipelines (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-```
+\`\`\`
 
 ### 4. Transactions
-```sql
+\`\`\`sql
 CREATE TABLE transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -132,10 +132,10 @@ CREATE TABLE transactions (
   description TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-```
+\`\`\`
 
 ### 5. Media Library
-```sql
+\`\`\`sql
 CREATE TABLE media_items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -146,10 +146,10 @@ CREATE TABLE media_items (
   thumbnail_url TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-```
+\`\`\`
 
 ### 6. Analytics Data
-```sql
+\`\`\`sql
 CREATE TABLE analytics_data (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -159,10 +159,10 @@ CREATE TABLE analytics_data (
   date DATE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-```
+\`\`\`
 
 ### 7. Messages/Conversations
-```sql
+\`\`\`sql
 CREATE TABLE conversations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -178,7 +178,7 @@ CREATE TABLE messages (
   content TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
-```
+\`\`\`
 
 ## 🚀 Next Steps
 
@@ -225,4 +225,4 @@ CREATE TABLE messages (
 - **Frontend Components**: 3/8 ✅ Complete, 5/8 🔄 In Progress
 - **Type Safety**: 8/8 🔄 Needs fixes
 
-**Overall Progress**: ~60% Complete 
+**Overall Progress**: ~60% Complete

@@ -37,4 +37,4 @@ const LinkedInCallback: React.FC = () => {
   );
 };
 
-export default LinkedInCallback; 
+export default LinkedInCallback;

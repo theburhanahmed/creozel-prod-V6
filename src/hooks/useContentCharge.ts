@@ -29,4 +29,4 @@ export function useContentCharge({ userId, contentType, providerId }: UseContent
   }, [userId, contentType, providerId]);
 
   return { chargeInfo, loading, error };
-} 
+}

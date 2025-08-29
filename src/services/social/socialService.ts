@@ -161,4 +161,4 @@ export function getTikTokOAuthUrl(userId: string, redirectUri: string) {
     scope: 'user.info.basic,video.list,video.upload',
   });
   return `https://www.tiktok.com/v2/auth/authorize?${params.toString()}`;
-} 
+}

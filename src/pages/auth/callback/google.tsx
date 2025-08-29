@@ -37,4 +37,4 @@ const GoogleCallback: React.FC = () => {
   );
 };
 
-export default GoogleCallback; 
+export default GoogleCallback;

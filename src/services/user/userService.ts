@@ -92,4 +92,4 @@ export const userService = {
       throw new Error('Failed to update password');
     }
   }
-}; 
+};

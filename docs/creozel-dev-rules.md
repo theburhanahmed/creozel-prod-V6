@@ -22,7 +22,7 @@
 ## Project Structure
 
 ### Root Directory Structure
-```
+\`\`\`
 creozel/
 ├── .github/                 # GitHub workflows and templates
 ├── .vscode/                 # VS Code/Windsurf settings
@@ -43,10 +43,10 @@ creozel/
 ├── package.json            # Root package.json
 ├── turbo.json             # Turborepo configuration
 └── README.md              # Project overview
-```
+\`\`\`
 
 ### Application Structure (Feature-Based)
-```
+\`\`\`
 apps/web/src/
 ├── components/             # Reusable UI components
 │   ├── ui/                # Base UI components
@@ -68,7 +68,7 @@ apps/web/src/
 ├── assets/                # Static assets
 ├── styles/                # Global styles
 └── app.tsx               # Application entry point
-```
+\`\`\`
 
 ### Naming Conventions
 - **Files**: kebab-case (`user-profile.component.tsx`)
@@ -83,7 +83,7 @@ apps/web/src/
 ## Code Standards
 
 ### TypeScript Rules (MANDATORY)
-```typescript
+\`\`\`typescript
 // ✅ GOOD: Explicit types
 interface UserProfile {
   id: string;
@@ -100,7 +100,7 @@ const getUserProfile = async (userId: string): Promise<UserProfile> => {
 const getUserProfile = async (userId: any): Promise<any> => {
   // Implementation
 };
-```
+\`\`\`
 
 ### Code Quality Standards
 1. **No `any` types** - Use proper TypeScript types
@@ -112,7 +112,7 @@ const getUserProfile = async (userId: any): Promise<any> => {
 7. **Cyclomatic complexity**: Maximum 10
 
 ### ESLint Configuration (Mandatory Rules)
-```json
+\`\`\`json
 {
   "extends": [
     "@typescript-eslint/recommended",
@@ -127,10 +127,10 @@ const getUserProfile = async (userId: any): Promise<any> => {
     "complexity": ["error", 10]
   }
 }
-```
+\`\`\`
 
 ### Component Standards
-```typescript
+\`\`\`typescript
 // ✅ GOOD: Proper component structure
 interface UserCardProps {
   user: User;
@@ -153,14 +153,14 @@ export const UserCard: React.FC<UserCardProps> = ({
     </div>
   );
 };
-```
+\`\`\`
 
 ---
 
 ## Git Workflow
 
 ### Branch Strategy (GitFlow)
-```
+\`\`\`
 main                    # Production-ready code
 ├── develop            # Integration branch
 ├── feature/           # Feature branches
@@ -170,16 +170,16 @@ main                    # Production-ready code
 │   └── release/v1.2.0
 └── hotfix/           # Critical fixes
     └── hotfix/security-patch
-```
+\`\`\`
 
 ### Commit Message Format (Conventional Commits)
-```
+\`\`\`
 <type>(<scope>): <description>
 
 [optional body]
 
 [optional footer(s)]
-```
+\`\`\`
 
 **Types:**
 - `feat`: New feature
@@ -191,11 +191,11 @@ main                    # Production-ready code
 - `chore`: Maintenance tasks
 
 **Examples:**
-```
+\`\`\`
 feat(auth): implement OAuth2 authentication
 fix(api): resolve user profile update bug
 docs(readme): update installation instructions
-```
+\`\`\`
 
 ### Git Rules (MANDATORY)
 1. **Never push directly to `main` or `develop`**
@@ -206,7 +206,7 @@ docs(readme): update installation instructions
 6. **Delete feature branches after merging**
 
 ### Pre-commit Hooks (Required)
-```json
+\`\`\`json
 {
   "husky": {
     "hooks": {
@@ -219,7 +219,7 @@ docs(readme): update installation instructions
     "*.{md,json}": ["prettier --write"]
   }
 }
-```
+\`\`\`
 
 ---
 
@@ -233,7 +233,7 @@ docs(readme): update installation instructions
 5. **Authentication required for all endpoints**
 
 ### API Response Format (MANDATORY)
-```typescript
+\`\`\`typescript
 // ✅ SUCCESS Response
 interface ApiResponse<T> {
   success: true;
@@ -253,10 +253,10 @@ interface ApiErrorResponse {
     details?: Record<string, unknown>;
   };
 }
-```
+\`\`\`
 
 ### OpenAPI Documentation (Required)
-```yaml
+\`\`\`yaml
 # Every endpoint must have OpenAPI spec
 /api/v1/users/{id}:
   get:
@@ -274,7 +274,7 @@ interface ApiErrorResponse {
           application/json:
             schema:
               $ref: '#/components/schemas/UserResponse'
-```
+\`\`\`
 
 ### Database Standards
 1. **Use migrations for all schema changes**
@@ -295,7 +295,7 @@ interface ApiErrorResponse {
 5. **API Communication**: React Query for server state
 
 ### Service Layer Structure
-```typescript
+\`\`\`typescript
 // ✅ GOOD: Proper service layer
 export class UserService {
   constructor(
@@ -319,10 +319,10 @@ export class UserService {
     }
   }
 }
-```
+\`\`\`
 
 ### Error Handling Standards
-```typescript
+\`\`\`typescript
 // ✅ GOOD: Proper error handling
 export class ApiError extends Error {
   constructor(
@@ -340,7 +340,7 @@ export class ApiError extends Error {
 if (!user) {
   throw new ApiError(404, 'USER_NOT_FOUND', 'User not found');
 }
-```
+\`\`\`
 
 ---
 
@@ -353,7 +353,7 @@ if (!user) {
 - **Component Tests**: All UI components
 
 ### Test Structure (Jest/Vitest)
-```typescript
+\`\`\`typescript
 // ✅ GOOD: Proper test structure
 describe('UserService', () => {
   let userService: UserService;
@@ -382,7 +382,7 @@ describe('UserService', () => {
     });
   });
 });
-```
+\`\`\`
 
 ### Testing Rules (MANDATORY)
 1. **All new features must have tests**
@@ -403,7 +403,7 @@ describe('UserService', () => {
 5. **HTTPS everywhere**
 
 ### Data Security
-```typescript
+\`\`\`typescript
 // ✅ GOOD: Proper data handling
 const sensitiveData = {
   password: await bcrypt.hash(plainPassword, 12),
@@ -417,23 +417,23 @@ const sensitiveData = {
   apiKey: apiKey,
   creditCard: creditCardNumber
 };
-```
+\`\`\`
 
 ### Environment Variables (Required)
-```bash
+\`\`\`bash
 # .env.example
 DATABASE_URL=postgresql://user:pass@localhost:5432/creozel
 JWT_SECRET=your-super-secure-jwt-secret
 ENCRYPTION_KEY=your-encryption-key
 REDIS_URL=redis://localhost:6379
-```
+\`\`\`
 
 ---
 
 ## Documentation Rules
 
 ### Code Documentation (JSDoc)
-```typescript
+\`\`\`typescript
 /**
  * Creates a new user account with encrypted password
  * @param userData - User registration data
@@ -452,10 +452,10 @@ REDIS_URL=redis://localhost:6379
 async function createUser(userData: CreateUserDto): Promise<User> {
   // Implementation
 }
-```
+\`\`\`
 
 ### README Requirements (Every Feature)
-```markdown
+\`\`\`markdown
 # Feature Name
 
 ## Overview
@@ -472,7 +472,7 @@ Instructions for running tests.
 
 ## Contributing
 Guidelines for contributing to this feature.
-```
+\`\`\`
 
 ---
 
@@ -499,7 +499,7 @@ Guidelines for contributing to this feature.
 4. **Connection pooling for databases**
 
 ### Monitoring (Required)
-```typescript
+\`\`\`typescript
 // Performance monitoring
 import { performance } from 'perf_hooks';
 
@@ -511,7 +511,7 @@ logger.info('Operation completed', {
   duration: endTime - startTime,
   operation: 'someOperation'
 });
-```
+\`\`\`
 
 ---
 
@@ -573,7 +573,7 @@ logger.info('Operation completed', {
 ## Tools & Setup
 
 ### Required IDE Extensions (Windsurf/VS Code)
-```json
+\`\`\`json
 {
   "recommendations": [
     "esbenp.prettier-vscode",
@@ -583,10 +583,10 @@ logger.info('Operation completed', {
     "dbaeumer.vscode-eslint"
   ]
 }
-```
+\`\`\`
 
 ### CI/CD Pipeline
-```yaml
+\`\`\`yaml
 # .github/workflows/ci.yml
 name: CI/CD Pipeline
 on: [push, pull_request]
@@ -609,7 +609,7 @@ jobs:
         run: npm run test:coverage
       - name: Build application
         run: npm run build
-```
+\`\`\`
 
 ---
 

@@ -98,4 +98,4 @@ This document lists actionable tasks for further enhancements to the content gen
 ## Next Steps
 - [ ] Gather user feedback to prioritize enhancements
 - [ ] Roll out high-impact, low-complexity features first
-- [ ] Provide documentation, tooltips, and onboarding for new features 
+- [ ] Provide documentation, tooltips, and onboarding for new features

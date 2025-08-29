@@ -19,13 +19,13 @@ A modal component that allows users to configure how they want to repurpose thei
 A custom hook that handles the repurposing logic and state management.
 
 **Return Value:**
-```typescript
+\`\`\`typescript
 {
   repurpose: (contentId: string, config: IRepurposeConfig) => Promise<void>;
   isRepurposing: boolean;
   error: Error | null;
 }
-```
+\`\`\`
 
 ### 3. API Route (`pages/api/repurpose.ts`)
 Handles the server-side logic for content repurposing, including authentication and error handling.
@@ -37,21 +37,21 @@ Processes the content repurposing request and generates platform-specific versio
 
 ### Environment Variables
 Add these to your `.env.local` file:
-```
+\`\`\`
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-```
+\`\`\`
 
 ### Dependencies
 Make sure these dependencies are installed:
-```bash
+\`\`\`bash
 npm install @supabase/supabase-js @testing-library/react-hooks @testing-library/jest-dom
-```
+\`\`\`
 
 ## Usage Example
 
-```tsx
+\`\`\`tsx
 import { useState } from 'react';
 import { RepurposeModal } from '../components/autopilot/RepurposeModal';
 import { useRepurpose } from '../hooks/useRepurpose';
@@ -77,21 +77,21 @@ const MyComponent = () => {
     </>
   );
 };
-```
+\`\`\`
 
 ## Testing
 
 ### Unit Tests
 Run the test suite with:
-```bash
+\`\`\`bash
 npm test
-```
+\`\`\`
 
 ### Test Coverage
 To generate a coverage report:
-```bash
+\`\`\`bash
 npm test -- --coverage
-```
+\`\`\`
 
 ## Error Handling
 The component and hook include comprehensive error handling for:

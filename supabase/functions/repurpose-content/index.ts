@@ -199,4 +199,4 @@ async function generateText(prompt: string, options: any) {
     text: data.choices[0]?.message?.content || "",
     usage: data.usage,
   }
-} 
+}

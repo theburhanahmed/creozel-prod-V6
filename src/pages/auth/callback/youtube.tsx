@@ -37,4 +37,4 @@ const YouTubeCallback: React.FC = () => {
   );
 };
 
-export default YouTubeCallback; 
+export default YouTubeCallback;

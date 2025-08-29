@@ -94,7 +94,7 @@ This document outlines the comprehensive plan for implementing Creozel's MVP wit
 ## Technical Specifications
 
 ### Edge Functions Architecture
-```
+\`\`\`
 supabase/
   functions/
     _shared/           # Shared utilities
@@ -103,10 +103,10 @@ supabase/
     social/            # Social media integration
     billing/           # Payment processing
     ai/                # AI services
-```
+\`\`\`
 
 ### Environment Variables
-```env
+\`\`\`env
 # Supabase
 SUPABASE_URL=your-project-ref.supabase.co
 SUPABASE_ANON_KEY=your-anon-key
@@ -118,7 +118,7 @@ ELEVENLABS_API_KEY=...
 # Payment Processors
 RAZORPAY_KEY_ID=...
 STRIPE_SECRET_KEY=...
-```
+\`\`\`
 
 ## Testing Strategy
 

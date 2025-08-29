@@ -143,4 +143,4 @@ export const mediaService = {
       published: data.is_published || false
     };
   }
-}; 
+};

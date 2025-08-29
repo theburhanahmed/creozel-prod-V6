@@ -37,4 +37,4 @@ const FacebookCallback: React.FC = () => {
   );
 };
 
-export default FacebookCallback; 
+export default FacebookCallback;

@@ -84,4 +84,4 @@ serve(async (req) => {
   } catch (error) {
     return createResponse({ error: error.message }, 500)
   }
-}) 
+})

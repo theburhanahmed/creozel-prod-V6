@@ -37,4 +37,4 @@ const InstagramCallback: React.FC = () => {
   );
 };
 
-export default InstagramCallback; 
+export default InstagramCallback;

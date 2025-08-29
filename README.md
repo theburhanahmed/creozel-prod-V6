@@ -13,7 +13,7 @@ A production-grade content generation system built with Supabase Edge Functions,
 
 ## Architecture
 
-```
+\`\`\`
 ┌─────────────────┐     ┌─────────────────────┐     ┌──────────────────┐
 │  Client App     │     │  Supabase Edge      │     │  AI Providers    │
 │  (React)        │────▶│  Functions          │────▶│  (OpenAI, etc.)  │
@@ -23,7 +23,7 @@ A production-grade content generation system built with Supabase Edge Functions,
 │  Supabase       │     └─────────┬───────────┘     │  Storage         │
 │  Database       │◀──────────────┘                 │  (Supabase)      │
 └─────────────────┘                                └──────────────────┘
-```
+\`\`\`
 
 ## Getting Started
 
@@ -36,19 +36,19 @@ A production-grade content generation system built with Supabase Edge Functions,
 ### Installation
 
 1. Clone the repository:
-   ```bash
+   \`\`\`bash
    git clone <repository-url>
    cd creozel-prod-V6
-   ```
+   \`\`\`
 
 2. Install dependencies:
-   ```bash
+   \`\`\`bash
    npm install
-   ```
+   \`\`\`
 
 3. Set up environment variables:
    Create a `.env` file in the project root with the following variables:
-   ```env
+   \`\`\`env
    # Supabase
    SUPABASE_URL=your-supabase-url
    SUPABASE_ANON_KEY=your-supabase-anon-key
@@ -61,22 +61,22 @@ A production-grade content generation system built with Supabase Edge Functions,
    
    # Optional: Customize logging level
    LOG_LEVEL=info # debug, info, warn, error, critical
-   ```
+   \`\`\`
 
 4. Run database migrations:
-   ```bash
+   \`\`\`bash
    # Apply database migrations
    npx supabase db push
-   ```
+   \`\`\`
 
 5. Deploy Edge Functions:
-   ```bash
+   \`\`\`bash
    # Login to Supabase CLI if not already logged in
    npx supabase login
    
    # Deploy all functions
    npx supabase functions deploy --all
-   ```
+   \`\`\`
 
 ## API Reference
 
@@ -87,7 +87,7 @@ A production-grade content generation system built with Supabase Edge Functions,
 Generate new content using AI.
 
 **Request Body:**
-```json
+\`\`\`json
 {
   "userId": "user-uuid",
   "contentType": "text", // "text", "image", "audio", "video"
@@ -97,16 +97,16 @@ Generate new content using AI.
   },
   "providerName": "openai" // Optional
 }
-```
+\`\`\`
 
 **Response (202 Accepted):**
-```json
+\`\`\`json
 {
   "jobId": "job-uuid",
   "status": "accepted",
   "estimatedCost": 0.00042
 }
-```
+\`\`\`
 
 ### Check Job Status
 
@@ -115,7 +115,7 @@ Generate new content using AI.
 Check the status of a content generation job.
 
 **Response (200 OK):**
-```json
+\`\`\`json
 {
   "jobId": "job-uuid",
   "status": "completed",
@@ -131,7 +131,7 @@ Check the status of a content generation job.
   },
   "preview": "The sun was setting behind the mountains, casting..."
 }
-```
+\`\`\`
 
 ## Database Schema
 
@@ -190,7 +190,7 @@ Records all credit transactions.
 
 All API endpoints return standardized error responses:
 
-```json
+\`\`\`json
 {
   "error": "Error message",
   "code": "ERROR_CODE",
@@ -198,7 +198,7 @@ All API endpoints return standardized error responses:
     // Additional error details
   }
 }
-```
+\`\`\`
 
 Common error codes:
 - `VALIDATION_ERROR`: Invalid request data
@@ -243,13 +243,13 @@ Metrics are recorded to the `metrics` table for monitoring and analytics.
 1. Set up a Supabase project if you haven't already
 2. Configure environment variables in your deployment environment
 3. Run database migrations:
-   ```bash
+   \`\`\`bash
    npx supabase db push
-   ```
+   \`\`\`
 4. Deploy Edge Functions:
-   ```bash
+   \`\`\`bash
    npx supabase functions deploy --all
-   ```
+   \`\`\`
 5. Set up a cron job to process pending jobs (if not using Supabase webhooks)
 
 ## License

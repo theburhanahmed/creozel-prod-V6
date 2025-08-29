@@ -105,4 +105,4 @@ This file tracks the implementation and integration status of all features and f
 - Mark each item as `[x]` when implemented and integrated.
 - Add notes, links to PRs, or follow-up actions as needed.
 - Use this file as a living memory for AI and team progress tracking.
-- For detailed enhancement tasks, see /docs/CONTENT_PIPELINE_ENHANCEMENTS.md 
+- For detailed enhancement tasks, see /docs/CONTENT_PIPELINE_ENHANCEMENTS.md

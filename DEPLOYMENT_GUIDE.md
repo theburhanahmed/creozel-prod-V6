@@ -13,7 +13,7 @@
 
 Create or update your `.env` file with the following variables:
 
-```env
+\`\`\`env
 # Supabase
 SUPABASE_URL=your-supabase-project-url
 SUPABASE_ANON_KEY=your-supabase-anon-key
@@ -26,38 +26,38 @@ ELEVENLABS_API_KEY=your-elevenlabs-api-key  # For audio generation (optional)
 
 # Logging (optional)
 LOG_LEVEL=info  # debug, info, warn, error, critical
-```
+\`\`\`
 
 ### 2. Install Dependencies
 
-```bash
+\`\`\`bash
 npm install
-```
+\`\`\`
 
 ### 3. Login to Supabase CLI
 
-```bash
+\`\`\`bash
 npx supabase login
-```
+\`\`\`
 
 ### 4. Link Your Project
 
-```bash
+\`\`\`bash
 npx supabase link --project-ref your-project-ref
 # The project ref is the part of your Supabase URL: https://xyzabc123.supabase.co -> xyzabc123
-```
+\`\`\`
 
 ### 5. Deploy Database Schema
 
-```bash
+\`\`\`bash
 npx supabase db push
-```
+\`\`\`
 
 ### 6. Set Secrets
 
 Set each secret individually:
 
-```bash
+\`\`\`bash
 # Supabase secrets
 npx supabase secrets set SUPABASE_URL=your-supabase-project-url
 npx supabase secrets set SUPABASE_ANON_KEY=your-supabase-anon-key
@@ -70,13 +70,13 @@ npx supabase secrets set ELEVENLABS_API_KEY=your-elevenlabs-api-key
 
 # Optional: Set log level
 npx supabase secrets set LOG_LEVEL=info
-```
+\`\`\`
 
 ### 7. Deploy Edge Functions
 
 Deploy each function:
 
-```bash
+\`\`\`bash
 # Deploy content generation endpoint
 npx supabase functions deploy content-generation --no-verify-jwt
 
@@ -85,13 +85,13 @@ npx supabase functions deploy preview --no-verify-jwt
 
 # Deploy worker function
 npx supabase functions deploy worker --no-verify-jwt
-```
+\`\`\`
 
 ### 8. Test the Deployment
 
 You can test the API using cURL:
 
-```bash
+\`\`\`bash
 # Generate content
 curl -X POST 'https://your-project-ref.supabase.co/functions/v1/content-generation' \
   -H 'Authorization: Bearer your-supabase-anon-key' \
@@ -101,7 +101,7 @@ curl -X POST 'https://your-project-ref.supabase.co/functions/v1/content-generati
 # Check job status (replace JOB_ID from the response above)
 curl 'https://your-project-ref.supabase.co/functions/v1/preview/JOB_ID' \
   -H 'Authorization: Bearer your-supabase-anon-key'
-```
+\`\`\`
 
 ## Post-Deployment
 
