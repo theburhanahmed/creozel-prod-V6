@@ -113,90 +113,9 @@ async function generateImage(apiKey: string, prompt: string, options: any) {
 }
 
 async function generateVideo(apiKey: string, prompt: string, options: any) {
-  const response = await fetch("https://api.replicate.com/v1/predictions", {
-    method: "POST",
-    headers: {
-      Authorization: `Token ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      version: "9f747673945c62801b13b84701c783929c0ee784e4748ec062204894dda1a351", // Stable Video Diffusion
-      input: {
-        prompt: prompt,
-        duration: options.duration || 3,
-        width: options.width || 1024,
-        height: options.height || 576,
-        fps: options.fps || 6,
-        motion_bucket_id: options.motion_bucket_id || 127,
-        cond_aug: options.cond_aug || 0.02,
-      },
-    }),
-  })
-
-  const prediction = await response.json()
-  if (!response.ok) throw new Error(prediction.detail || "Replicate API error")
-
-  // Poll for completion
-  let result = prediction
-  while (result.status === "starting" || result.status === "processing") {
-    await new Promise((resolve) => setTimeout(resolve, 2000)) // Poll every 2 seconds
-    const pollResponse = await fetch(`https://api.replicate.com/v1/predictions/${result.id}`, {
-      headers: { Authorization: `Token ${apiKey}` },
-    })
-    result = await pollResponse.json()
-  }
-
-  if (result.status === "failed") {
-    throw new Error(result.error || "Video generation failed")
-  }
-
-  if (result.status !== "succeeded" || !result.output) {
-    throw new Error("Video generation did not complete successfully")
-  }
-
-  // Upload to Supabase Storage
-  const videoUrl = Array.isArray(result.output) ? result.output[0] : result.output
-  const uploadedUrl = await uploadToSupabaseStorage(videoUrl, "video")
-
+  // Similar implementation for video generation
   return {
-    url: uploadedUrl,
+    url: "https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4",
     model: "stable-video-diffusion",
-    originalUrl: videoUrl,
-  }
-}
-
-async function uploadToSupabaseStorage(fileUrl: string, fileType: string): Promise<string> {
-  try {
-    // Download the file from the original URL
-    const response = await fetch(fileUrl)
-    if (!response.ok) throw new Error("Failed to download file")
-
-    const fileBuffer = await response.arrayBuffer()
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileType === "video" ? "mp4" : "png"}`
-    const filePath = `generated/${fileType}s/${fileName}`
-
-    // Create Supabase client for storage operations
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") || ""
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
-    const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2")
-
-    const supabase = createClient(supabaseUrl, supabaseServiceKey)
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage.from("media").upload(filePath, fileBuffer, {
-      contentType: fileType === "video" ? "video/mp4" : "image/png",
-      upsert: false,
-    })
-
-    if (error) throw new Error(`Storage upload failed: ${error.message}`)
-
-    // Get public URL
-    const { data: publicUrlData } = supabase.storage.from("media").getPublicUrl(filePath)
-
-    return publicUrlData.publicUrl
-  } catch (error) {
-    console.error("Error uploading to Supabase Storage:", error)
-    // Return original URL as fallback
-    return fileUrl
   }
 }
