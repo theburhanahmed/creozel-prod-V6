@@ -1,10 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { Deno } from "https://deno.land/std@0.168.0/node/global.ts" // Declare Deno variable
 import { handleCors, createResponse } from "../_shared/cors.ts"
-
-// Import the unified generation logic
-import { generateContentWithProvider } from "../generate-content/index.ts"
 
 // Types
 interface Pipeline {
@@ -21,151 +17,55 @@ interface Pipeline {
   total_runs: number
   successful_runs: number
   failed_runs: number
+  status: string
 }
 
-interface PipelineTarget {
+interface PipelineStep {
   id: string
   pipeline_id: string
-  platform: string
-  account_id: string
-  post_config: Record<string, any>
+  step_type: string
+  step_order: number
+  step_config: Record<string, any>
   is_active: boolean
 }
 
-interface AIProvider {
+interface PipelineHistory {
   id: string
-  name: string
-  provider_type: string
-  api_endpoint: string
-  api_key_env: string
-  cost_per_unit: number
-  config: Record<string, any>
-  is_default: boolean
-  is_active: boolean
-  content_type: string
+  pipeline_id: string
+  step_id: string
+  status: string
+  result: any
+  error: string
+  started_at: string
+  completed_at: string
 }
-
-interface GenerationResult {
-  content?: string
-  fileUrl?: string
-  fileName?: string
-  fileType?: string
-  metadata: Record<string, any>
-}
-
-// Configuration
-const BATCH_SIZE = 10 // Process pipelines in batches
-const MAX_RETRY_ATTEMPTS = 3
-const LOCK_TIMEOUT_MINUTES = 10
-const RATE_LIMIT_DELAY_MS = 1000 // Delay between AI API calls
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL") || ""
-const supabaseKey = Deno.env.get("SUPABASE_KEY") || ""
+const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || ""
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-async function notifyUser(supabase, userId, title, message, type = "info", action_url = null) {
-  await supabase.from("notifications").insert({
-    user_id: userId,
-    title,
-    message,
-    type,
-    action_url,
-  })
-}
-
 serve(async (req) => {
-  // Handle CORS
   const corsResponse = handleCors(req)
   if (corsResponse) return corsResponse
 
   try {
     if (req.method === "POST") {
-      // Manual run endpoint
       const { pipelineId } = await req.json()
       if (!pipelineId) {
         return createResponse({ error: "pipelineId required" }, 400)
       }
-      // Authenticate user
-      // (Assume authenticateRequest is available, or use supabase auth)
-      // For this code, we'll use a simple auth check
-      const supabaseUrl = Deno.env.get("SUPABASE_URL") || ""
-      const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY") || ""
-      const supabase = createClient(supabaseUrl, supabaseKey, {
-        global: { headers: { Authorization: req.headers.get("Authorization")! } },
+
+      // Run the specific pipeline
+      const result = await runPipeline(pipelineId)
+      return createResponse({
+        success: true,
+        pipelineId: pipelineId,
+        result: result,
+        message: "Pipeline execution completed"
       })
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
-        return createResponse({ error: "Unauthorized" }, 401)
-      }
-      // Fetch pipeline and verify ownership
-      const { data: pipeline, error: fetchError } = await supabase
-        .from("pipelines")
-        .select("*")
-        .eq("id", pipelineId)
-        .eq("user_id", user.id)
-        .single()
-      if (fetchError || !pipeline) {
-        return createResponse({ error: "Pipeline not found or not authorized" }, 404)
-      }
-      // Run the pipeline logic for this pipeline only
-      try {
-        // (Reuse the logic from the batch runner for a single pipeline)
-        // Update last_run_at and increment total_runs
-        await supabase
-          .from("pipelines")
-          .update({
-            last_run_at: new Date().toISOString(),
-            total_runs: pipeline.total_runs + 1,
-          })
-          .eq("id", pipeline.id)
-        // Calculate next run time (use cron if available)
-        let nextRunAt = new Date(Date.now() + 60 * 60 * 1000)
-        if (pipeline.schedule_cron) {
-          try {
-            const cronParser = (await import("https://esm.sh/cron-parser@4.6.3")).default
-            const interval = cronParser.parseExpression(pipeline.schedule_cron)
-            nextRunAt = interval.next().toDate()
-          } catch {}
-        }
-        await supabase
-          .from("pipelines")
-          .update({
-            next_run_at: nextRunAt.toISOString(),
-            successful_runs: pipeline.successful_runs + 1,
-          })
-          .eq("id", pipeline.id)
-        // (Omit actual content generation for brevity, but would call generateContentForPipeline here)
-        await notifyUser(
-          supabase,
-          user.id,
-          `Pipeline Run: ${pipeline.name}`,
-          `Pipeline run completed successfully.`,
-          "success"
-        )
-        return createResponse({ success: true, pipelineId: pipeline.id, message: "Pipeline run triggered" })
-      } catch (error) {
-        await supabase
-          .from("pipelines")
-          .update({
-            failed_runs: pipeline.failed_runs + 1,
-          })
-          .eq("id", pipeline.id)
-        await notifyUser(
-          supabase,
-          user.id,
-          `Pipeline Run Failed: ${pipeline.name}`,
-          `Pipeline run failed: ${error.message}`,
-          "error"
-        )
-        return createResponse({ error: error.message }, 500)
-      }
     }
 
-    console.log("Pipeline runner started")
-
-    // Get pipelines due for execution
+    // Batch processing - get all pipelines due for execution
     const now = new Date()
     const { data: pipelinesDue, error: pipelinesError } = await supabase
       .from("pipelines")
@@ -192,67 +92,20 @@ serve(async (req) => {
 
     // Process pipelines
     const results = await Promise.all(
-      pipelinesDue.map(async (pipeline: any) => {
+      pipelinesDue.map(async (pipeline: Pipeline) => {
         try {
-          // Update last_run_at and increment total_runs
-          await supabase
-            .from("pipelines")
-            .update({
-              last_run_at: new Date().toISOString(),
-              total_runs: pipeline.total_runs + 1,
-            })
-            .eq("id", pipeline.id)
-
-          // Calculate next run time (simplified - add 1 hour)
-          const nextRunAt = new Date(Date.now() + 60 * 60 * 1000)
-          await supabase
-            .from("pipelines")
-            .update({
-              next_run_at: nextRunAt.toISOString(),
-              successful_runs: pipeline.successful_runs + 1,
-            })
-            .eq("id", pipeline.id)
-
-          console.log(`Pipeline ${pipeline.id} processed successfully. Next run: ${nextRunAt}`)
-          await notifyUser(
-            supabase,
-            pipeline.user_id,
-            `Pipeline Run: ${pipeline.name}`,
-            `Pipeline run completed successfully.`,
-            "success"
-          )
-          return { success: true, pipelineId: pipeline.id }
+          const result = await runPipeline(pipeline.id)
+          return { success: true, pipelineId: pipeline.id, result }
         } catch (error) {
           console.error(`Error processing pipeline ${pipeline.id}:`, error)
-
-          // Update failure stats
-          await supabase
-            .from("pipelines")
-            .update({
-              failed_runs: pipeline.failed_runs + 1,
-            })
-            .eq("id", pipeline.id)
-
-          await notifyUser(
-            supabase,
-            pipeline.user_id,
-            `Pipeline Run Failed: ${pipeline.name}`,
-            `Pipeline run failed: ${error.message}`,
-            "error"
-          )
-
           return { success: false, pipelineId: pipeline.id, error: error.message }
         }
-      }),
+      })
     )
 
     const totalProcessed = results.length
     const totalSuccessful = results.filter((r) => r.success).length
     const totalFailed = results.filter((r) => !r.success).length
-
-    console.log(
-      `Pipeline execution completed. Processed: ${totalProcessed}, Successful: ${totalSuccessful}, Failed: ${totalFailed}`,
-    )
 
     return createResponse({
       success: true,
@@ -274,171 +127,225 @@ serve(async (req) => {
   }
 })
 
-async function generateContentForPipeline(pipeline: Pipeline, aiProvider: AIProvider): Promise<GenerationResult> {
-  const prompt = interpolatePromptTemplate(pipeline.prompt_template, pipeline.prompt_variables)
+async function runPipeline(pipelineId: string) {
+  // Fetch pipeline details
+  const { data: pipeline, error: pipelineError } = await supabase
+    .from("pipelines")
+    .select("*")
+    .eq("id", pipelineId)
+    .single()
 
-  console.log(`Generating ${pipeline.content_type} content using ${aiProvider.name}`)
+  if (pipelineError || !pipeline) {
+    throw new Error("Pipeline not found")
+  }
 
-  let attempt = 0
-  while (attempt < MAX_RETRY_ATTEMPTS) {
+  // Fetch pipeline steps
+  const { data: steps, error: stepsError } = await supabase
+    .from("pipeline_steps")
+    .select("*")
+    .eq("pipeline_id", pipelineId)
+    .eq("is_active", true)
+    .order("step_order", { ascending: true })
+
+  if (stepsError) {
+    throw new Error(`Failed to fetch pipeline steps: ${stepsError.message}`)
+  }
+
+  if (!steps || steps.length === 0) {
+    throw new Error("No active steps found for pipeline")
+  }
+
+  console.log(`Running pipeline ${pipeline.name} with ${steps.length} steps`)
+
+  // Update pipeline status and stats
+  await supabase
+    .from("pipelines")
+    .update({
+      last_run_at: new Date().toISOString(),
+      total_runs: pipeline.total_runs + 1,
+    })
+    .eq("id", pipelineId)
+
+  const pipelineHistory: PipelineHistory[] = []
+  let currentContentId: string | null = null
+
+  // Execute each step in order
+  for (const step of steps) {
+    const stepHistory: PipelineHistory = {
+      id: crypto.randomUUID(),
+      pipeline_id: pipelineId,
+      step_id: step.id,
+      status: "running",
+      result: null,
+      error: null,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+    }
+
     try {
-      // Use the unified content generation logic
-      const result = await generateContentWithProvider(
-        aiProvider,
-        pipeline.content_type,
-        prompt,
-        pipeline.generation_config,
-      )
-      return result
-    } catch (error) {
-      attempt++
-      console.error(`AI API call attempt ${attempt} failed:`, error)
-
-      if (attempt >= MAX_RETRY_ATTEMPTS) {
-        throw new Error(`AI API failed after ${MAX_RETRY_ATTEMPTS} attempts: ${error.message}`)
+      console.log(`Executing step ${step.step_order}: ${step.step_type}`)
+      
+      let stepResult
+      switch (step.step_type) {
+        case "generate-content":
+          stepResult = await executeGenerateContentStep(step, pipeline)
+          currentContentId = stepResult.content_id
+          break
+          
+        case "post-to-platform":
+          if (!currentContentId) {
+            throw new Error("No content generated for posting step")
+          }
+          stepResult = await executePostToPlatformStep(step, pipeline, currentContentId)
+          break
+          
+        case "schedule-pipeline":
+          stepResult = await executeSchedulePipelineStep(step, pipeline)
+          break
+          
+        default:
+          throw new Error(`Unknown step type: ${step.step_type}`)
       }
 
-      // Exponential backoff
-      const delay = Math.pow(2, attempt) * 1000
-      await new Promise((resolve) => setTimeout(resolve, delay))
+      stepHistory.status = "completed"
+      stepHistory.result = stepResult
+      stepHistory.completed_at = new Date().toISOString()
+      
+      console.log(`Step ${step.step_order} completed successfully`)
+    } catch (error) {
+      console.error(`Step ${step.step_order} failed:`, error)
+      stepHistory.status = "failed"
+      stepHistory.error = error.message
+      stepHistory.completed_at = new Date().toISOString()
+      
+      // Record step failure
+      pipelineHistory.push(stepHistory)
+      
+      // Update pipeline failure stats
+      await supabase
+        .from("pipelines")
+        .update({
+          failed_runs: pipeline.failed_runs + 1,
+        })
+        .eq("id", pipelineId)
+      
+      throw new Error(`Pipeline failed at step ${step.step_order}: ${error.message}`)
+    }
+
+    pipelineHistory.push(stepHistory)
+  }
+
+  // Record all step executions
+  if (pipelineHistory.length > 0) {
+    const { error: historyError } = await supabase
+      .from("pipeline_history")
+      .insert(pipelineHistory)
+
+    if (historyError) {
+      console.warn("Failed to record pipeline history:", historyError)
     }
   }
 
-  throw new Error("Unexpected error in content generation")
-}
+  // Update pipeline success stats and next run time
+  const nextRunAt = calculateNextRunTime(pipeline.schedule_cron)
+  await supabase
+    .from("pipelines")
+    .update({
+      successful_runs: pipeline.successful_runs + 1,
+      next_run_at: nextRunAt.toISOString(),
+    })
+    .eq("id", pipelineId)
 
-async function getAIProviderById(providerId: string): Promise<AIProvider | null> {
-  const { data, error } = await supabase
-    .from("ai_providers")
-    .select("*")
-    .eq("id", providerId)
-    .eq("is_active", true)
-    .single()
-
-  if (error) {
-    console.error(`Error fetching AI provider:`, error)
-    return null
+  return {
+    pipeline_id: pipelineId,
+    steps_executed: steps.length,
+    content_generated: currentContentId,
+    next_run_at: nextRunAt.toISOString(),
   }
-
-  return data
 }
 
-async function deductCreditsForPipeline(
-  userId: string,
-  cost: number,
-  pipelineId: string,
-  contentId: string,
-): Promise<void> {
-  // Use the unified credit deduction system
-  const { data, error } = await supabase.functions.invoke("deduct-credits", {
+async function executeGenerateContentStep(step: PipelineStep, pipeline: Pipeline) {
+  const { data, error } = await supabase.functions.invoke("generate-content", {
     body: {
-      userId: userId,
-      generationCost: cost,
-      generationType: "pipeline_execution",
-      generationMetadata: {
-        pipeline_id: pipelineId,
-        content_id: contentId,
-        timestamp: new Date().toISOString(),
+      type: pipeline.content_type,
+      prompt: pipeline.prompt_template,
+      options: {
+        ...pipeline.generation_config,
+        ...step.step_config,
       },
+      ai_provider_id: pipeline.ai_provider_id,
     },
   })
 
   if (error) {
-    throw new Error(`Credit deduction failed: ${error.message}`)
+    throw new Error(`Content generation failed: ${error.message}`)
   }
 
   if (!data.success) {
-    throw new Error(`Credit deduction failed: ${data.message}`)
+    throw new Error(`Content generation failed: ${data.error}`)
+  }
+
+  return {
+    content_id: data.content_id,
+    content_url: data.content_url,
+    content_type: pipeline.content_type,
   }
 }
 
-async function storeGeneratedContent(
-  pipeline: Pipeline,
-  result: GenerationResult,
-  aiProvider: AIProvider,
-): Promise<string> {
-  const storagePath: string | null = null
-  let fileUrl: string | null = null
-
-  // Store file in Supabase Storage if we have file data
-  if (result.fileUrl && result.fileName) {
-    // For now, just use the provided URL
-    fileUrl = result.fileUrl
-  }
-
-  // Insert content record
-  const { data, error } = await supabase
-    .from("generated_content")
-    .insert({
-      pipeline_id: pipeline.id,
-      user_id: pipeline.user_id,
-      content_type: pipeline.content_type,
-      ai_provider: aiProvider.name,
-      prompt: interpolatePromptTemplate(pipeline.prompt_template, pipeline.prompt_variables),
-      content_text: result.content,
-      storage_path: storagePath,
-      file_url: fileUrl,
-      metadata: result.metadata,
-      generation_cost: aiProvider.cost_per_unit,
-    })
-    .select("id")
-    .single()
-
-  if (error) {
-    throw new Error(`Failed to store content record: ${error.message}`)
-  }
-
-  return data.id
-}
-
-async function getPipelineTargets(pipelineId: string): Promise<PipelineTarget[]> {
-  const { data, error } = await supabase
-    .from("pipeline_targets")
-    .select("*")
-    .eq("pipeline_id", pipelineId)
-    .eq("is_active", true)
-
-  if (error) {
-    throw new Error(`Failed to fetch pipeline targets: ${error.message}`)
-  }
-
-  return data || []
-}
-
-async function enqueuePostingTasks(pipelineId: string, contentId: string, targets: PipelineTarget[]): Promise<void> {
-  if (targets.length === 0) {
-    console.log(`No active targets for pipeline ${pipelineId}`)
-    return
-  }
-
-  const postingTasks = targets.map((target) => ({
-    pipeline_id: pipelineId,
-    content_id: contentId,
-    target_id: target.id,
-    platform: target.platform,
-    post_data: {
-      account_id: target.account_id,
-      config: target.post_config,
+async function executePostToPlatformStep(step: PipelineStep, pipeline: Pipeline, contentId: string) {
+  const { data, error } = await supabase.functions.invoke("post-to-platform", {
+    body: {
+      content_id: contentId,
+      platform: step.step_config.platform,
+      account_id: step.step_config.account_id,
+      post_config: step.step_config.post_config || {},
     },
-    scheduled_for: new Date().toISOString(),
-  }))
-
-  const { error } = await supabase.from("posting_queue").insert(postingTasks)
+  })
 
   if (error) {
-    throw new Error(`Failed to enqueue posting tasks: ${error.message}`)
+    throw new Error(`Platform posting failed: ${error.message}`)
   }
 
-  console.log(`Enqueued ${postingTasks.length} posting tasks for pipeline ${pipelineId}`)
+  if (!data.success) {
+    throw new Error(`Platform posting failed: ${data.error}`)
+  }
+
+  return {
+    post_id: data.post_id,
+    platform: step.step_config.platform,
+    status: data.status,
+  }
 }
 
-function interpolatePromptTemplate(template: string, variables: Record<string, any>): string {
-  let result = template
+async function executeSchedulePipelineStep(step: PipelineStep, pipeline: Pipeline) {
+  const { data, error } = await supabase.functions.invoke("schedule-pipeline", {
+    body: {
+      pipeline_id: pipeline.id,
+      schedule_config: step.step_config,
+    },
+  })
 
-  for (const [key, value] of Object.entries(variables)) {
-    const placeholder = `{{${key}}}`
-    result = result.replace(new RegExp(placeholder, "g"), String(value))
+  if (error) {
+    throw new Error(`Pipeline scheduling failed: ${error.message}`)
   }
 
-  return result
+  if (!data.success) {
+    throw new Error(`Pipeline scheduling failed: ${data.error}`)
+  }
+
+  return {
+    scheduled_at: data.scheduled_at,
+    next_run_at: data.next_run_at,
+  }
+}
+
+function calculateNextRunTime(cronExpression: string): Date {
+  try {
+    // Simple cron parsing - add 1 hour for now
+    // In production, use a proper cron parser
+    return new Date(Date.now() + 60 * 60 * 1000)
+  } catch (error) {
+    console.warn("Failed to parse cron expression, defaulting to 1 hour:", error)
+    return new Date(Date.now() + 60 * 60 * 1000)
+  }
 }

@@ -32,6 +32,26 @@ export const socialService = {
     return data;
   },
 
+  // Get connected accounts from the database
+  async getConnectedAccounts() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error('User not authenticated');
+
+    const { data, error } = await supabase
+      .from('oauth_connections')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+
+    if (error) throw error;
+    return data;
+  },
+
+  // Disconnect platform (alias for disconnect)
+  async disconnectPlatform(platform: string) {
+    return this.disconnect(platform);
+  },
+
   // Post content to a social platform
   async postToPlatform(platform: string, content: any) {
     const { data, error } = await supabase.functions.invoke('post-to-platform', {

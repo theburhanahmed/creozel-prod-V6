@@ -1,185 +1,365 @@
 import React, { useState, useEffect } from 'react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
-import { VideoIcon, UploadIcon, SparklesIcon, PlayIcon, PauseIcon, LoaderIcon, Settings2Icon, ImageIcon, Type as TypeIcon, ChevronLeftIcon } from 'lucide-react';
+import { VideoIcon, PlayIcon, DownloadIcon, RefreshCwIcon, SparklesIcon, SettingsIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { Link } from 'react-router-dom';
+import { ContentLayout } from '../../components/layout/ContentLayout';
 import { supabase } from '../../../supabase/client';
 import { useContentCharge } from '../../hooks/useContentCharge';
 
 export const VideoEditor = () => {
+  const [prompt, setPrompt] = useState('');
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [videoUrl, setVideoUrl] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [selectedStyle, setSelectedStyle] = useState('explanatory');
-  const [script, setScript] = useState('');
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [duration, setDuration] = useState(3);
+  const [width, setWidth] = useState(1024);
+  const [height, setHeight] = useState(576);
+  const [fps, setFps] = useState(24);
   const [userId, setUserId] = useState('');
 
   useEffect(() => {
+    // Fetch userId on mount
     supabase.auth.getUser().then(res => {
       if (res?.data?.user?.id) setUserId(res.data.user.id);
     });
   }, []);
 
-  const contentType = 'video';
-  const { chargeInfo, loading: chargeLoading, error: chargeError } = useContentCharge({ userId, contentType });
+  // For charge preview, use 'video' as the contentType
+  const { chargeInfo, loading: chargeLoading, error: chargeError } = useContentCharge({ userId, contentType: 'video' });
+
+  const durationOptions = [
+    { value: 3, label: '3 seconds' },
+    { value: 5, label: '5 seconds' },
+    { value: 10, label: '10 seconds' },
+    { value: 15, label: '15 seconds' },
+  ];
+
+  const resolutionOptions = [
+    { value: { width: 1024, height: 576 }, label: 'HD (1024x576)' },
+    { value: { width: 1280, height: 720 }, label: 'HD+ (1280x720)' },
+    { value: { width: 1920, height: 1080 }, label: 'Full HD (1920x1080)' },
+    { value: { width: 1024, height: 1024 }, label: 'Square (1024x1024)' },
+  ];
+
+  const fpsOptions = [
+    { value: 24, label: '24 FPS (Film)' },
+    { value: 30, label: '30 FPS (Standard)' },
+    { value: 60, label: '60 FPS (Smooth)' },
+  ];
 
   const handleGenerate = async () => {
-    if (!script.trim()) {
-      toast.error('Please enter a video script');
+    if (!prompt.trim()) {
+      toast.error('Please enter a prompt first');
       return;
     }
+
     setIsGenerating(true);
+    setGenerationProgress(0);
+    setGeneratedVideoUrl('');
+
     try {
-      const { data, error } = await supabase.functions.invoke('generate-content', {
-        body: { type: 'video', prompt: script, options: { style: selectedStyle } },
+      const { data, error } = await supabase.functions.invoke('ai-replicate', {
+        body: {
+          type: 'video',
+          prompt,
+          options: {
+            duration,
+            width,
+            height,
+            fps,
+          },
+        },
       });
-      if (error || data?.error) throw error || new Error(data?.error);
-      setVideoUrl(data?.content?.url || data?.content || '');
-      toast.success('Video generated successfully!');
+
+      if (error || data?.error) {
+        throw error || new Error(data?.error);
+      }
+
+      // Handle different response formats
+      const videoUrl = data?.url || data?.video_url || data?.content?.url || data?.content?.video_url;
+      
+      if (videoUrl) {
+        setGeneratedVideoUrl(videoUrl);
+        toast.success('Video generated successfully!');
+      } else {
+        throw new Error('No video URL received from the API');
+      }
     } catch (error: any) {
-      toast.error('Failed to generate video', { description: error.message || 'Unknown error' });
+      toast.error('Failed to generate video', { 
+        description: error.message || 'Unknown error occurred' 
+      });
+      console.error('Video generation error:', error);
     } finally {
       setIsGenerating(false);
+      setGenerationProgress(0);
     }
   };
 
-  const videoStyles = [{
-    id: 'explanatory',
-    name: 'Explanatory',
-    icon: TypeIcon
-  }, {
-    id: 'promotional',
-    name: 'Promotional',
-    icon: SparklesIcon
-  }, {
-    id: 'tutorial',
-    name: 'Tutorial',
-    icon: Settings2Icon
-  }, {
-    id: 'social',
-    name: 'Social Media',
-    icon: ImageIcon
-  }];
+  const handleDownload = async () => {
+    if (!generatedVideoUrl) return;
+    
+    try {
+      const response = await fetch(generatedVideoUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `generated-video-${Date.now()}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success('Video downloaded successfully!');
+    } catch (error) {
+      toast.error('Failed to download video');
+    }
+  };
 
-  return <div className="max-w-6xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <Link to="/" className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors duration-200 mb-2">
-            <ChevronLeftIcon size={16} />
-            <span>Back to Dashboard</span>
-          </Link>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Video Generator
+  const handleRegenerate = () => {
+    if (prompt.trim()) {
+      handleGenerate();
+    }
+  };
+
+  const handleResolutionChange = (resolution: { width: number; height: number }) => {
+    setWidth(resolution.width);
+    setHeight(resolution.height);
+  };
+
+  const placeholderText = "Describe the video you want to generate, e.g., 'A majestic eagle soaring over snow-capped mountains at golden hour, cinematic lighting, smooth camera movement'";
+
+  // Simulate progress during generation
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isGenerating) {
+      interval = setInterval(() => {
+        setGenerationProgress(prev => {
+          if (prev >= 90) return prev;
+          return prev + Math.random() * 10;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isGenerating]);
+
+  return (
+    <ContentLayout
+      title="AI Video Generator"
+      description="Create stunning videos from text descriptions using AI-powered generation"
+    >
+      <div className="max-w-6xl mx-auto p-6 space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center justify-center gap-2">
+            <VideoIcon className="h-8 w-8 text-green-500" />
+            AI Video Generator
           </h1>
-          <p className="text-gray-600 dark:text-gray-300">
-            Create and edit video content using AI
+          <p className="text-gray-600 dark:text-gray-400">
+            Transform your ideas into captivating videos with AI-powered generation
           </p>
         </div>
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Input Card */}
-        <Card className="h-fit">
-          <div className="p-6 space-y-6">
-            <div>
-              <label htmlFor="script" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Video Script
-              </label>
-              <textarea id="script" value={script} onChange={e => setScript(e.target.value)} placeholder="Enter your video script..." className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500" rows={4} />
+
+        {/* Cost Information */}
+        {chargeInfo && (
+          <Card className="p-4 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <SparklesIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                <span className="text-blue-800 dark:text-blue-200 font-medium">
+                  Estimated cost: {chargeInfo.finalCharge} credits
+                </span>
+              </div>
+              {chargeLoading && <RefreshCwIcon className="h-4 w-4 animate-spin text-blue-600" />}
             </div>
-            <div className="space-y-4">
+          </Card>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Input Section */}
+          <Card className="p-6 space-y-6">
+            <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Video Style
+                Video Description
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                {videoStyles.map(style => {
-                const Icon = style.icon;
-                return <div key={style.id} onClick={() => setSelectedStyle(style.id)} className={`
-                        p-3 border rounded-lg cursor-pointer transition-all
-                        ${selectedStyle === style.id ? 'border-green-500 bg-green-50 dark:bg-green-900/20 ring-2 ring-green-500/50' : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}
-                      `}>
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center text-white">
-                          <Icon size={14} />
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-900 dark:text-white">
-                            {style.name}
-                          </h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Optimized for {style.name.toLowerCase()}
-                          </p>
-                        </div>
-                      </div>
-                    </div>;
-              })}
+              <textarea
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder={placeholderText}
+                className="w-full h-32 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white resize-none"
+                disabled={isGenerating}
+              />
+            </div>
+
+            {/* Video Settings */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Duration
+                </label>
+                <select
+                  value={duration}
+                  onChange={(e) => setDuration(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  disabled={isGenerating}
+                >
+                  {durationOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Resolution
+                </label>
+                <select
+                  onChange={(e) => {
+                    const selected = resolutionOptions.find(opt => opt.label === e.target.value);
+                    if (selected) handleResolutionChange(selected.value);
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  disabled={isGenerating}
+                >
+                  {resolutionOptions.map((option) => (
+                    <option key={option.label} value={option.label}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Frame Rate
+                </label>
+                <select
+                  value={fps}
+                  onChange={(e) => setFps(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  disabled={isGenerating}
+                >
+                  {fpsOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
-            {/* Charge Preview */}
-            <div>
-              {chargeLoading ? (
-                <span>Loading charge...</span>
-              ) : chargeError ? (
-                <span className="text-red-500">Charge unavailable</span>
-              ) : chargeInfo ? (
-                <span>
-                  <strong>Charge:</strong> {chargeInfo.finalCharge?.toFixed(2)} credits
-                  <br />
-                  <small>
-                    (Base: {chargeInfo.cost_per_unit} + Profit: {chargeInfo.profit_percent}%)
-                  </small>
-                </span>
-              ) : null}
-            </div>
-            <Button variant="primary" size="lg" leftIcon={isGenerating ? <LoaderIcon className="animate-spin" /> : <SparklesIcon />} onClick={handleGenerate} disabled={isGenerating || !script.trim()} className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700">
-              {isGenerating ? 'Generating...' : 'Generate Video'}
+
+            {/* Generate Button */}
+            <Button
+              onClick={handleGenerate}
+              disabled={!prompt.trim() || isGenerating}
+              isLoading={isGenerating}
+              loadingText="Generating Video..."
+              leftIcon={<SparklesIcon className="h-5 w-5" />}
+              fullWidth
+              size="lg"
+            >
+              Generate Video
             </Button>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300 dark:border-gray-600" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white dark:bg-gray-800 text-gray-500">
-                  or
-                </span>
-              </div>
+          </Card>
+
+          {/* Output Section */}
+          <Card className="p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Generated Video
+              </h3>
+              {generatedVideoUrl && (
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleRegenerate}
+                    variant="outline"
+                    size="sm"
+                    leftIcon={<RefreshCwIcon className="h-4 w-4" />}
+                    disabled={isGenerating}
+                  >
+                    Regenerate
+                  </Button>
+                  <Button
+                    onClick={handleDownload}
+                    variant="secondary"
+                    size="sm"
+                    leftIcon={<DownloadIcon className="h-4 w-4" />}
+                  >
+                    Download
+                  </Button>
+                </div>
+              )}
             </div>
-            <Button variant="outline" size="lg" leftIcon={<UploadIcon size={18} />} className="w-full">
-              Upload Video
-            </Button>
-          </div>
-        </Card>
-        {/* Output Card */}
-        <Card className="h-fit">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-            <h3 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
-              <VideoIcon size={18} className="text-green-500" />
-              Generated Video
-            </h3>
-          </div>
-          <div className="p-6">
-            <div className="aspect-video rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-50 dark:bg-gray-800/50 overflow-hidden relative">
-              {isGenerating ? <div className="text-center p-6">
-                  <LoaderIcon size={40} className="mx-auto text-green-500 animate-spin mb-4" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Generating your video...
-                  </p>
-                </div> : videoUrl ? <>
-                  <img src={videoUrl} alt="Video preview" className="w-full h-full object-cover" />
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <Button variant="neon" size="lg" className="rounded-full w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-600" onClick={() => setIsPlaying(!isPlaying)}>
-                      {isPlaying ? <PauseIcon size={24} /> : <PlayIcon size={24} />}
-                    </Button>
+
+            {/* Video Display */}
+            <div className="min-h-[400px] flex items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-800">
+              {isGenerating ? (
+                <div className="text-center space-y-4">
+                  <div className="relative">
+                    <div className="w-20 h-20 mx-auto">
+                      <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+                      <div 
+                        className="absolute inset-0 rounded-full border-4 border-green-500 border-t-transparent animate-spin"
+                        style={{ transform: `rotate(${generationProgress * 3.6}deg)` }}
+                      ></div>
+                    </div>
+                    <div className="mt-4 text-center">
+                      <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                        {Math.round(generationProgress)}%
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        Creating your video...
+                      </p>
+                    </div>
                   </div>
-                </> : <div className="text-center p-6">
-                  <VideoIcon size={40} className="mx-auto text-gray-400 mb-4" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                </div>
+              ) : generatedVideoUrl ? (
+                <div className="w-full space-y-4">
+                  <video
+                    src={generatedVideoUrl}
+                    controls
+                    className="w-full h-auto rounded-lg shadow-lg"
+                    onError={() => {
+                      toast.error('Failed to load generated video');
+                      setGeneratedVideoUrl('');
+                    }}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Video generated successfully! You can download it or regenerate with different settings.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center space-y-4">
+                  <VideoIcon className="h-16 w-16 text-gray-400 mx-auto" />
+                  <p className="text-gray-500 dark:text-gray-400">
                     Your generated video will appear here
                   </p>
-                </div>}
+                </div>
+              )}
             </div>
-          </div>
+          </Card>
+        </div>
+
+        {/* Tips Section */}
+        <Card className="p-6 bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800">
+          <h3 className="text-lg font-semibold text-green-800 dark:text-green-200 mb-3">
+            💡 Tips for Better Videos
+          </h3>
+          <ul className="space-y-2 text-green-700 dark:text-green-300 text-sm">
+            <li>• Be specific about camera movement, angles, and transitions</li>
+            <li>• Describe lighting, atmosphere, and mood in detail</li>
+            <li>• Mention specific colors, textures, and visual elements</li>
+            <li>• Include information about pacing and rhythm</li>
+            <li>• Specify the intended style (cinematic, documentary, artistic, etc.)</li>
+          </ul>
         </Card>
       </div>
-    </div>;
+    </ContentLayout>
+  );
 };

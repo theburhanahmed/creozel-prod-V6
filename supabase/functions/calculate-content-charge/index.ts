@@ -1,17 +1,12 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 import { Deno } from "https://deno.land/std@0.168.0/io/mod.ts"
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-}
+import { handleCors, createResponse } from "../_shared/cors.ts"
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
-  }
+  // Handle CORS preflight request
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
 
   try {
     const supabaseClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
@@ -31,10 +26,7 @@ serve(async (req) => {
         .eq("is_active", true)
         .single()
       if (providerError || !provider) {
-        return new Response(JSON.stringify({ error: "Default provider not found for this content type" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
+        return createResponse({ error: "Default provider not found for this content type" }, 400)
       }
       actualProviderId = provider.id
     }
@@ -47,10 +39,7 @@ serve(async (req) => {
       .eq("is_active", true)
       .single()
     if (providerFetchError || !provider) {
-      return new Response(JSON.stringify({ error: "Provider not found" }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      return createResponse({ error: "Provider not found" }, 404)
     }
 
     // 2. Calculate pricing locally using provider record
@@ -78,25 +67,16 @@ serve(async (req) => {
     const finalCharge = cost_per_unit * (1 + profit_percent / 100)
 
     if (finalCharge <= 0) {
-      return new Response(JSON.stringify({ error: "Pricing not configured" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      return createResponse({ error: "Pricing not configured" }, 400)
     }
 
-    return new Response(
-      JSON.stringify({
-        providerId: actualProviderId,
-        cost_per_unit,
-        profit_percent,
-        finalCharge,
-      }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    )
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return createResponse({
+      providerId: actualProviderId,
+      cost_per_unit,
+      profit_percent,
+      finalCharge,
     })
+  } catch (error) {
+    return createResponse({ error: error instanceof Error ? error.message : "Unknown error" }, 500)
   }
 })

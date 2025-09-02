@@ -1,12 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
-import { Deno } from "https://deno.land/std@0.168.0/node/global.ts" // Declare Deno variable
-
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-}
+import { handleCors, createResponse } from "../_shared/cors.ts"
 
 interface CreditRequest {
   action: "add" | "deduct" | "balance"
@@ -16,9 +10,9 @@ interface CreditRequest {
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders })
-  }
+  // Handle CORS preflight request
+  const corsResponse = handleCors(req)
+  if (corsResponse) return corsResponse
 
   try {
     const supabaseClient = createClient(
@@ -31,10 +25,7 @@ serve(async (req) => {
     } = await supabaseClient.auth.getUser(req.headers.get("Authorization")?.replace("Bearer ", "") ?? "")
 
     if (!user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      })
+      return createResponse({ error: "Unauthorized" }, 401)
     }
 
     if (req.method === "GET") {
@@ -46,10 +37,7 @@ serve(async (req) => {
         .single()
 
       if (userError) {
-        return new Response(JSON.stringify({ error: userError.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
+        return createResponse({ error: userError.message }, 500)
       }
 
       const { data: transactions, error: transactionsError } = await supabaseClient
@@ -59,19 +47,13 @@ serve(async (req) => {
         .order("created_at", { ascending: false })
 
       if (transactionsError) {
-        return new Response(JSON.stringify({ error: transactionsError.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
+        return createResponse({ error: transactionsError.message }, 500)
       }
 
-      return new Response(
-        JSON.stringify({
-          balance: userData?.credits || 0,
-          transactions: transactions || [],
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      )
+      return createResponse({
+        balance: userData?.credits || 0,
+        transactions: transactions || [],
+      })
     }
 
     if (req.method === "POST") {
@@ -79,17 +61,11 @@ serve(async (req) => {
       const { action, amount, description, reference_id } = await req.json()
 
       if (!["add", "deduct"].includes(action)) {
-        return new Response(JSON.stringify({ error: "Invalid action. Must be 'add' or 'deduct'" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
+        return createResponse({ error: "Invalid action. Must be 'add' or 'deduct'" }, 400)
       }
 
       if (!amount || amount <= 0) {
-        return new Response(JSON.stringify({ error: "Amount must be a positive number" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
+        return createResponse({ error: "Amount must be a positive number" }, 400)
       }
 
       let result
@@ -109,33 +85,21 @@ serve(async (req) => {
       }
 
       if (result.error) {
-        return new Response(JSON.stringify({ error: result.error.message }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        })
+        return createResponse({ error: result.error.message }, 500)
       }
 
       // Get updated balance
       const { data: updatedUser } = await supabaseClient.from("users").select("credits").eq("id", user.id).single()
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          credits: updatedUser?.credits || 0,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-      )
+      return createResponse({
+        success: true,
+        credits: updatedUser?.credits || 0,
+      })
     }
 
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    })
+    return createResponse({ error: "Method not allowed" }, 405)
   } catch (error) {
     console.error("Function error:", error)
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    })
+    return createResponse({ error: error instanceof Error ? error.message : "Unknown error" }, 500)
   }
 })
